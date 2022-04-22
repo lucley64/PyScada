@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+from tkinter.tix import Tree
 
 from pyscada.admin import admin_site
 
 from pyscada.models import Variable
 from pyscada.models import Color
-from pyscada.hmi.models import ControlItem
+from pyscada.hmi.models import ControlItem, IFCModel
 from pyscada.hmi.models import Chart, ChartAxis
 from pyscada.hmi.models import Form
 from pyscada.hmi.models import SlidingPanelMenu
@@ -259,6 +260,14 @@ class ProcessFlowDiagramAdmin(admin.ModelAdmin):
     save_as = True
     save_as_continue = True
 
+class IFCModelAdmin(admin.ModelAdmin):
+    list_display_links = ('id',)
+    list_display = ('id', 'title',)
+    list_editable = ('title',)
+    save_as = True
+    save_as_continue = True
+
+
 
 admin_site.register(ControlItem, ControlItemAdmin)
 admin_site.register(Chart, ChartAdmin)
@@ -266,6 +275,7 @@ admin_site.register(Pie, PieAdmin)
 admin_site.register(Form, FormAdmin)
 admin_site.register(SlidingPanelMenu, SlidingPanelMenuAdmin)
 admin_site.register(Page, PageAdmin)
+admin_site.register(IFCModel, IFCModelAdmin)
 admin_site.register(GroupDisplayPermission, GroupDisplayPermissionAdmin)
 admin_site.register(DisplayValueOption, DisplayValueOptionAdmin)
 admin_site.register(ControlElementOption, ControlElementOptionAdmin)

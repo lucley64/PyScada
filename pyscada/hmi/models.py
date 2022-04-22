@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+from cProfile import label
+from turtle import title
 
 from pyscada.models import Variable, VariableProperty, Color
 
@@ -662,3 +664,11 @@ class GroupDisplayPermission(models.Model):
 
     def __str__(self):
         return self.hmi_group.name
+
+@python_2_unicode_compatible
+class IFCModel(models.Model):
+    id = models.AutoField(primary_key=True)
+    title = models.CharField(max_length=400, default='')
+
+    def __str__(self):
+        return str(self.id) + ': ' + self.title
