@@ -93682,7 +93682,7 @@ const isBim3DModel = document.getElementById("isBim3DModel");
 if (isBim3DModel) {
     const canvas = document.getElementById("3dmodel-canvas");
     canvas.style.position = "absolute";
-    canvas.style.height = "500px";
+    canvas.style.height = window.innerHeight-200 + "px";
     const viewer = new Viewer({
         canvasId: "3dmodel-canvas",
         transparent: true,
@@ -93695,7 +93695,7 @@ if (isBim3DModel) {
     const loader = new XKTLoaderPlugin(viewer);
 
     const fileName = document.getElementById("isBim3DModel").getAttribute("fileName");
-    const fileUrl = window.location.origin +  document.getElementById("isBim3DModel").getAttribute("fileUrl");
+    const fileUrl = window.location.origin + document.getElementById("isBim3DModel").getAttribute("fileUrl");
 
     const model = loader.load({
         id: fileName,
@@ -93704,7 +93704,7 @@ if (isBim3DModel) {
     });
 
     model.on("loaded", () => {
-    canvas.style.position = "";
+        canvas.style.position = "";
     });
 
     new NavCubePlugin(viewer, {
