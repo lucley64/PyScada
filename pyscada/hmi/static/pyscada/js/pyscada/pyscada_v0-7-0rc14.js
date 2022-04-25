@@ -2870,3 +2870,4 @@ $( document ).ready(function() {
     document.getElementById('refresh-rate-li').classList.remove('hidden');
     document.getElementById('refresh-rate-divider').classList.remove('hidden')
 });
+

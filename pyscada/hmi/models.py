@@ -666,9 +666,27 @@ class GroupDisplayPermission(models.Model):
         return self.hmi_group.name
 
 @python_2_unicode_compatible
-class IFCModel(models.Model):
+class Bim3DModel(WidgetContentModel):
     id = models.AutoField(primary_key=True)
     title = models.CharField(max_length=400, default='')
+    file = models.FileField(upload_to='', default='')
 
     def __str__(self):
         return str(self.id) + ': ' + self.title
+
+    def gen_html(self, **kwargs):
+        """
+
+        :return: main panel html and sidebar html as
+        """
+
+        widget_pk = kwargs['widget_pk'] if 'widget_pk' in kwargs else 0
+        visible_element_list = kwargs['visible_control_element_list'] if 'visible_control_element_list' in kwargs else []
+        main_template = get_template('bim3dmodel.html')
+        main_content = main_template.render(dict(
+            bim3dmodel = self,
+            visible_control_element_list=visible_element_list,
+            widget_pk=widget_pk
+        ))
+        sidebar_content = None
+        return main_content, sidebar_content
