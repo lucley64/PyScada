@@ -29,4 +29,13 @@ if (isBim3DModel) {
     model.on("loaded", () => {
     canvas.style.position = ""
     })
+
+    const navCube = new NavCubePlugin(viewer, {
+        canvasId: "nav-cube-canvas",
+        color: "lightblue",
+        visible: true,
+        cameraFly: true,
+        cameraFitFOV: 45,
+        cameraFlyDuration: 0.5,
+    })
 }
