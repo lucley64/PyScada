@@ -1,8 +1,11 @@
-import { Viewer, XKTLoaderPlugin } from "@xeokit/xeokit-sdk/dist/xeokit-sdk.es";
+import { NavCubePlugin, Viewer, XKTLoaderPlugin } from "@xeokit/xeokit-sdk/dist/xeokit-sdk.es";
 
 const isBim3DModel = document.getElementById("isBim3DModel");
 
 if (isBim3DModel) {
+    const canvas = document.getElementById("3dmodel-canvas");
+    canvas.style.position = "absolute"
+    canvas.style.height = "500px"
     const viewer = new Viewer({
         canvasId: "3dmodel-canvas",
         transparent: true,
@@ -21,5 +24,9 @@ if (isBim3DModel) {
         id: fileName,
         src: fileUrl,
         edges: true,
+    })
+
+    model.on("loaded", () => {
+    canvas.style.position = ""
     })
 }
