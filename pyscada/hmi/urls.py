@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+from django.conf import settings
 
 from django.conf.urls import url
 from . import views
 from pyscada.admin import admin_site
 from django.contrib.auth import views as auth_views
+from django.conf.urls.static import static
 
 urlpatterns = [
     # Public pages
@@ -26,4 +28,4 @@ urlpatterns = [
     url(r'^form/read_all_task/$', views.form_read_all_task),
     url(r'^form/write_property2/$', views.form_write_property2),
     url(r'^view/(?P<link_title>[\w,-]+)/$', views.view, name="main-view"),
-]
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

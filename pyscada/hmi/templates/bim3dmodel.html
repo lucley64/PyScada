@@ -1,13 +1,5 @@
-<canvas id="myCanvas"></canvas>
-<canvas id="myNavCubeCanvas"></canvas>
-<div id="treeViewContainer">
-    <div class="tab">
-        <button id="defaultBtn" class="tablinks" onclick="openTree(event, 'containment')">containment</button>
-        <button class="tablinks" onclick="openTree(event, 'storeys')">storeys</button>
-        <button class="tablinks" onclick="openTree(event, 'types')">types</button>
-    </div>
-    <div id="containmentTree" class="tabcontent"></div>
-    <div id="storeysTree" class="tabcontent"></div>
-    <div id="typesTree" class="tabcontent"></div>
+<div id="isBim3DModel" fileName="{{bim3dmodel.file.name}}" fileUrl="{{bim3dmodel.file.url}}">
+    <canvas id="3dmodel-canvas"></canvas>
+    <canvas id="nav-cube-canvas"></canvas>
+    <div id="model-properties-container"></div>
 </div>
-<div id="propertiesContainer"></div>

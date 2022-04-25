@@ -8,3 +8,4 @@ dist
 /.project
 docs/_build
 /.idea/*
+/node_modules
