@@ -1,4 +1,4 @@
-import { NavCubePlugin, Viewer, XKTLoaderPlugin } from "@xeokit/xeokit-sdk/dist/xeokit-sdk.es";
+import { NavCubePlugin, TreeViewPlugin, Viewer, XKTLoaderPlugin } from "@xeokit/xeokit-sdk/dist/xeokit-sdk.es";
 
 const isBim3DModel = document.getElementById("isBim3DModel");
 
@@ -24,11 +24,11 @@ if (isBim3DModel) {
         id: fileName,
         src: fileUrl,
         edges: true,
-    })
+    });
 
     model.on("loaded", () => {
         canvas.style.position = ""
-    })
+    });
 
     const navCube = new NavCubePlugin(viewer, {
         canvasId: "nav-cube-canvas",
@@ -37,5 +37,43 @@ if (isBim3DModel) {
         cameraFly: true,
         cameraFitFOV: 45,
         cameraFlyDuration: 0.5,
+    });
+
+    new TreeViewPlugin(viewer, {
+        containerElement: document.getElementById("model-tree-content-containment"),
+        autoExpandDepth: 1,
+        hierarchy: "containment",
+        sortNodes: true,
     })
+
+    new TreeViewPlugin(viewer, {
+        containerElement: document.getElementById("model-tree-content-storeys"),
+        autoExpandDepth: 1,
+        hierarchy: "storeys"
+    })
+
+    new TreeViewPlugin(viewer, {
+        containerElement: document.getElementById("model-tree-content-types"),
+        autoExpandDepth: 1,
+        hierarchy: "types",
+    })
+
+    openTree = (event, tree) =>{
+        const tabContent = document.getElementsByClassName("model-tab-content");
+        for (const i of tabContent) {
+            i.style.display = "none";
+        }
+
+        const tabLinks = document.getElementsByClassName("model-tree-tab-links");
+        for (const i of tabLinks) {
+            i.className = i.className.replace(" active", "");
+        }
+
+        document.getElementById("model-tree-content-" + tree).style.display = "block";
+        event.currentTarget.className += "active";
+    }
+
+    window.onload = () =>{
+        document.getElementById("model-tree-tab").children[0].click();
+    }
 }
