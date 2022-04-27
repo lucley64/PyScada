@@ -6,7 +6,7 @@ from pyscada.admin import admin_site
 
 from pyscada.models import Variable
 from pyscada.models import Color
-from pyscada.hmi.models import ControlItem, Bim3DModel
+from pyscada.hmi.models import ControlItem, Bim3DModel, IfcClass
 from pyscada.hmi.models import Chart, ChartAxis
 from pyscada.hmi.models import Form
 from pyscada.hmi.models import SlidingPanelMenu
@@ -285,3 +285,4 @@ admin_site.register(Widget, WidgetAdmin)
 admin_site.register(View, ViewAdmin)
 admin_site.register(ProcessFlowDiagram, ProcessFlowDiagramAdmin)
 admin_site.register(ProcessFlowDiagramItem, ProcessFlowDiagramItemAdmin)
+admin_site.register(IfcClass)

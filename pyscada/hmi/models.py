@@ -666,10 +666,16 @@ class GroupDisplayPermission(models.Model):
         return self.hmi_group.name
 
 @python_2_unicode_compatible
+class IfcClass(models.Model):
+    id = models.CharField(max_length=255, primary_key=True)
+    name = models.CharField(max_length=255, default='')
+
+@python_2_unicode_compatible
 class Bim3DModel(WidgetContentModel):
     id = models.AutoField(primary_key=True)
     title = models.CharField(max_length=400, default='')
     file = models.FileField(upload_to='', default='')
+    classes = models.ManyToManyField(IfcClass)
 
     def __str__(self):
         return str(self.id) + ': ' + self.title
