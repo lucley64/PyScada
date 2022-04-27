@@ -17,3 +17,68 @@ canvas#navcube-canvas {
 div#model-container {
     position: relative;
 }
+
+div#model-id-container {
+    height: 100%;
+    width: 300px;
+    position: absolute;
+    left: 0;
+    z-index: 2000000;
+    color: #000;
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.xeokit-context-menu {
+    font-family: 'Roboto', sans-serif;
+    font-size: 15px;
+    display: none;
+    z-index: 300000;
+    background: rgba(255, 255, 255, 0.46);
+    border: 1px solid black;
+    border-radius: 6px;
+    padding: 0;
+    width: 200px;
+}
+
+.xeokit-context-menu ul {
+    list-style: none;
+    margin-left: 0;
+    padding: 0;
+}
+
+.xeokit-context-menu ul li {
+    list-style-type: none;
+    padding-left: 10px;
+    padding-right: 20px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    color: black;
+    border-bottom: 1px solid gray;
+    background: rgba(255, 255, 255, 0.46);
+    cursor: pointer;
+    width: calc(100% - 30px);
+}
+
+.xeokit-context-menu ul li:hover {
+    background: black;
+    color: white;
+    font-weight: normal;
+}
+
+.xeokit-context-menu ul li span {
+    display: inline-block;
+}
+
+.xeokit-context-menu .disabled {
+    display: inline-block;
+    color: gray;
+    cursor: default;
+    font-weight: normal;
+}
+
+.xeokit-context-menu .disabled:hover {
+    color: gray;
+    cursor: default;
+    background: #eeeeee;
+    font-weight: normal;
+}
