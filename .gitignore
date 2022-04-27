@@ -9,3 +9,4 @@ dist
 docs/_build
 /.idea/*
 /node_modules
+PyScada.code-workspace

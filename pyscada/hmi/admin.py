@@ -265,6 +265,7 @@ class Bim3DModelAdmin(admin.ModelAdmin):
     list_editable = ('title',)
     save_as = True
     save_as_continue = True
+    change_form_template = 'admin/changeBimModelTemplate.html'
 
 
 

@@ -1,0 +1,19 @@
+canvas#model-canvas {
+    background: lightblue;
+    background-image: linear-gradient(lightblue, white);
+    width: 100%;
+    height: 500px;
+}
+
+canvas#navcube-canvas {
+    z-index: 2000000;
+    right: 1%;
+    bottom: 0;
+    height: 200px;
+    width: 200px;
+    position: absolute;
+}
+
+div#model-container {
+    position: relative;
+}
