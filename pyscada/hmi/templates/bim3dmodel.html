@@ -1,9 +1,14 @@
-<div id="isBim3DModel" fileName="{{bim3dmodel.file.name}}" fileUrl="{{bim3dmodel.file.url}}">
+<div id="isBim3DModel"
+     fileName="{{ bim3dmodel.file.name }}"
+     fileUrl="{{ bim3dmodel.file.url }}">
     <div class="model-menu" id="model-tree-view-container">
         <div id="model-tree-tab" class="model-tree-tab">
-            <button class="model-tree-tab-links" onclick="openTree(event, this.innerHTML)">containment</button>
-            <button class="model-tree-tab-links" onclick="openTree(event, this.innerHTML)">storeys</button>
-            <button class="model-tree-tab-links" onclick="openTree(event, this.innerHTML)">types</button>
+            <button class="model-tree-tab-links"
+                    onclick="openTree(event, this.innerHTML)">containment</button>
+            <button class="model-tree-tab-links"
+                    onclick="openTree(event, this.innerHTML)">storeys</button>
+            <button class="model-tree-tab-links"
+                    onclick="openTree(event, this.innerHTML)">types</button>
         </div>
         <div id="model-tree-content-containment" class="model-tab-content"></div>
         <div id="model-tree-content-storeys" class="model-tab-content"></div>
@@ -15,3 +20,6 @@
     </div>
     <div id="model-properties-container"></div>
 </div>
+{% for class in classesContent %}
+    {{ class|safe }}
+{% endfor %}

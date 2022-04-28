@@ -669,6 +669,10 @@ class GroupDisplayPermission(models.Model):
 class IfcClass(models.Model):
     id = models.CharField(max_length=255, primary_key=True)
     name = models.CharField(max_length=255, default='')
+    content = models.ForeignKey(WidgetContent, null=True, default=None, on_delete=models.SET_NULL)
+    
+    def __str__(self) -> str:
+        return self.id + ': ' + self.name
 
 @python_2_unicode_compatible
 class Bim3DModel(WidgetContentModel):
@@ -685,14 +689,49 @@ class Bim3DModel(WidgetContentModel):
 
         :return: main panel html and sidebar html as
         """
-
+        user = kwargs['user'] if 'user' in kwargs else 0
         widget_pk = kwargs['widget_pk'] if 'widget_pk' in kwargs else 0
         visible_element_list = kwargs['visible_control_element_list'] if 'visible_control_element_list' in kwargs else []
         main_template = get_template('bim3dmodel.html')
+        classesContent = self.genClassesHtml(widgetPk = widget_pk, user = user)
         main_content = main_template.render(dict(
             bim3dmodel = self,
+            classesContent = classesContent,
             visible_control_element_list=visible_element_list,
             widget_pk=widget_pk
         ))
         sidebar_content = None
         return main_content, sidebar_content
+    
+    def genClassesHtml(self, widgetPk, user) -> list:
+        ret = list()
+        ifcClassTemplate = get_template('ifcClassTemplate.html')
+        for ifcClass in self.classes.all():
+            isChart = False
+            mainContent = list()
+            sidebarContent = list()
+            if not ifcClass.content is None:
+                mc, sbc = ifcClass.content.create_panel_html(
+                    widget_pk = ifcClass.pk, 
+                    user = user
+                )
+                if mc is not None and mc != "":
+                    mainContent.append(dict(
+                        html = mc,
+                        widget = ifcClass
+                    ))
+                if sbc is not None and sbc != "":
+                    sidebarContent.append(dict(
+                        html = sbc,
+                        widget = ifcClass
+                    ))
+                if ifcClass.content.content_model == "pyscada.hmi.models.Chart":
+                    isChart = True
+            ret.append(ifcClassTemplate.render(
+                {
+                    'mainContent': mainContent,
+                    'sidebarContent': sidebarContent,
+                    'sidebarVisible': len(sidebarContent) > 0,
+                },
+            ))
+        return ret
