@@ -8818,6 +8818,36 @@ const createRTCViewMat = (function () {
     }
 }());
 
+/**
+ * Converts a World-space 3D position to RTC.
+ *
+ * Given a double-precision World-space position, returns a double-precision relative-to-center (RTC) center pos
+ * and a single-precision offset fom that center.
+ * @private
+ * @param {Float64Array} worldPos The World-space position.
+ * @param {Float64Array} rtcCenter Double-precision relative-to-center (RTC) center pos.
+ * @param {Float32Array} rtcPos Single-precision offset fom that center.
+ */
+function worldToRTCPos(worldPos, rtcCenter, rtcPos) {
+
+    const xHigh = Float32Array.from([worldPos[0]])[0];
+    const xLow = worldPos[0] - xHigh;
+
+    const yHigh = Float32Array.from([worldPos[1]])[0];
+    const yLow = worldPos[1] - yHigh;
+
+    const zHigh = Float32Array.from([worldPos[2]])[0];
+    const zLow = worldPos[2] - zHigh;
+
+    rtcCenter[0] = xHigh;
+    rtcCenter[1] = yHigh;
+    rtcCenter[2] = zHigh;
+
+    rtcPos[0] = xLow;
+    rtcPos[1] = yLow;
+    rtcPos[2] = zLow;
+}
+
 
 /**
  * Converts a flat array of double-precision positions to RTC positions, if necessary.
@@ -32440,6 +32470,353 @@ function buildCylinderGeometry(cfg = {}) {
         uv: uvs,
         indices: indices
     });
+}
+
+/**
+ * @desc Creates a sphere-shaped {@link Geometry}.
+ *
+ * ## Usage
+ *
+ * Creating a {@link Mesh} with a sphere-shaped {@link ReadableGeometry} :
+ *
+ * [[Run this example](http://xeokit.github.io/xeokit-sdk/examples/#geometry_builders_buildSphereGeometry)]
+ *
+ * ````javascript
+ * import {Viewer, Mesh, buildSphereGeometry, ReadableGeometry, PhongMaterial, Texture} from "xeokit-sdk.es.js";
+ *
+ * const viewer = new Viewer({
+ *     canvasId: "myCanvas"
+ * });
+ *
+ * viewer.camera.eye = [0, 0, 5];
+ * viewer.camera.look = [0, 0, 0];
+ * viewer.camera.up = [0, 1, 0];
+ *
+ * new Mesh(viewer.scene, {
+ *      geometry: new ReadableGeometry(viewer.scene, buildSphereGeometry({
+ *          center: [0,0,0],
+ *          radius: 1.5,
+ *          heightSegments: 60,
+ *          widthSegments: 60
+ *      }),
+ *      material: new PhongMaterial(viewer.scene, {
+ *         diffuseMap: new Texture(viewer.scene, {
+ *             src: "textures/diffuse/uvGrid2.jpg"
+ *         })
+ *      })
+ * });
+ * ````
+ *
+ * @function buildSphereGeometry
+ * @param {*} [cfg] Configs
+ * @param {String} [cfg.id] Optional ID for the {@link Geometry}, unique among all components in the parent {@link Scene}, generated automatically when omitted.
+ * @param {Number[]} [cfg.center]  3D point indicating the center position.
+ * @param {Number} [cfg.radius=1]  Radius.
+ * @param {Number} [cfg.heightSegments=24] Number of latitudinal bands.
+ * @param  {Number} [cfg.widthSegments=18] Number of longitudinal bands.
+ * @returns {Object} Configuration for a {@link Geometry} subtype.
+ */
+function buildSphereGeometry(cfg = {}) {
+
+    const lod = cfg.lod || 1;
+
+    const centerX = cfg.center ? cfg.center[0] : 0;
+    const centerY = cfg.center ? cfg.center[1] : 0;
+    const centerZ = cfg.center ? cfg.center[2] : 0;
+
+    let radius = cfg.radius || 1;
+    if (radius < 0) {
+        console.error("negative radius not allowed - will invert");
+        radius *= -1;
+    }
+
+    let heightSegments = cfg.heightSegments || 18;
+    if (heightSegments < 0) {
+        console.error("negative heightSegments not allowed - will invert");
+        heightSegments *= -1;
+    }
+    heightSegments = Math.floor(lod * heightSegments);
+    if (heightSegments < 18) {
+        heightSegments = 18;
+    }
+
+    let widthSegments = cfg.widthSegments || 18;
+    if (widthSegments < 0) {
+        console.error("negative widthSegments not allowed - will invert");
+        widthSegments *= -1;
+    }
+    widthSegments = Math.floor(lod * widthSegments);
+    if (widthSegments < 18) {
+        widthSegments = 18;
+    }
+
+    const positions = [];
+    const normals = [];
+    const uvs = [];
+    const indices = [];
+
+    let i;
+    let j;
+
+    let theta;
+    let sinTheta;
+    let cosTheta;
+
+    let phi;
+    let sinPhi;
+    let cosPhi;
+
+    let x;
+    let y;
+    let z;
+
+    let u;
+    let v;
+
+    let first;
+    let second;
+
+    for (i = 0; i <= heightSegments; i++) {
+
+        theta = i * Math.PI / heightSegments;
+        sinTheta = Math.sin(theta);
+        cosTheta = Math.cos(theta);
+
+        for (j = 0; j <= widthSegments; j++) {
+
+            phi = j * 2 * Math.PI / widthSegments;
+            sinPhi = Math.sin(phi);
+            cosPhi = Math.cos(phi);
+
+            x = cosPhi * sinTheta;
+            y = cosTheta;
+            z = sinPhi * sinTheta;
+            u = 1.0 - j / widthSegments;
+            v = i / heightSegments;
+
+            normals.push(x);
+            normals.push(y);
+            normals.push(z);
+
+            uvs.push(u);
+            uvs.push(v);
+
+            positions.push(centerX + radius * x);
+            positions.push(centerY + radius * y);
+            positions.push(centerZ + radius * z);
+        }
+    }
+
+    for (i = 0; i < heightSegments; i++) {
+        for (j = 0; j < widthSegments; j++) {
+
+            first = (i * (widthSegments + 1)) + j;
+            second = first + widthSegments + 1;
+
+            indices.push(first + 1);
+            indices.push(second + 1);
+            indices.push(second);
+            indices.push(first + 1);
+            indices.push(second);
+            indices.push(first);
+        }
+    }
+
+    return utils.apply(cfg, {
+        positions: positions,
+        normals: normals,
+        uv: uvs,
+        indices: indices
+    });
+}
+
+/**
+ *  @desc An arbitrarily-aligned World-space clipping plane.
+ *
+ * * Slices portions off objects to create cross-section views or reveal interiors.
+ * * Registered by {@link SectionPlane#id} in {@link Scene#sectionPlanes}.
+ * * Indicates World-space position in {@link SectionPlane#pos} and orientation in {@link SectionPlane#dir}.
+ * * Discards elements from the half-space in the direction of {@link SectionPlane#dir}.
+ * * Can be be enabled or disabled via {@link SectionPlane#active}.
+ *
+ * ## Usage
+ *
+ * In the example below, we'll create two SectionPlanes to slice a model loaded from glTF. Note that we could also create them
+ * using a {@link SectionPlanesPlugin}.
+ *
+ * ````javascript
+ * import {Viewer, GLTFLoaderPlugin, SectionPlane} from "xeokit-sdk.es.js";
+ *
+ * const viewer = new Viewer({
+ *      canvasId: "myCanvas"
+ * });
+ *
+ * const gltfLoaderPlugin = new GLTFModelsPlugin(viewer, {
+ *      id: "GLTFModels"
+ * });
+ *
+ * const model = gltfLoaderPlugin.load({
+ *      id: "myModel",
+ *      src: "./models/gltf/mygltfmodel.gltf"
+ * });
+ *
+ * // Create a SectionPlane on negative diagonal
+ * const sectionPlane1 = new SectionPlane(viewer.scene, {
+ *     pos: [1.0, 1.0, 1.0],
+ *     dir: [-1.0, -1.0, -1.0],
+ *     active: true
+ * }),
+ *
+ * // Create a SectionPlane on positive diagonal
+ * const sectionPlane2 = new SectionPlane(viewer.scene, {
+ *     pos: [-1.0, -1.0, -1.0],
+ *     dir: [1.0, 1.0, 1.0],
+ *     active: true
+ * });
+ * ````
+ */
+class SectionPlane extends Component {
+
+    /**
+     @private
+     */
+    get type() {
+        return "SectionPlane";
+    }
+
+    /**
+     * @constructor
+     * @param {Component} [owner]  Owner component. When destroyed, the owner will destroy this SectionPlane as well.
+     * @param {*} [cfg]  SectionPlane configuration
+     * @param  {String} [cfg.id] Optional ID, unique among all components in the parent {@link Scene}, generated automatically when omitted.
+     * @param {Boolean} [cfg.active=true] Indicates whether or not this SectionPlane is active.
+     * @param {Number[]} [cfg.pos=[0,0,0]] World-space position of the SectionPlane.
+     * @param {Number[]} [cfg.dir=[0,0,-1]] Vector perpendicular to the plane surface, indicating the SectionPlane plane orientation.
+     */
+    constructor(owner, cfg = {}) {
+
+        super(owner, cfg);
+
+        this._state = new RenderState({
+            active: true,
+            pos: math.vec3(),
+            dir: math.vec3(),
+            dist: 0
+        });
+
+        this.active = cfg.active;
+        this.pos = cfg.pos;
+        this.dir = cfg.dir;
+
+        this.scene._sectionPlaneCreated(this);
+    }
+
+    /**
+     * Sets if this SectionPlane is active or not.
+     *
+     * Default value is ````true````.
+     *
+     * @param {Boolean} value Set ````true```` to activate else ````false```` to deactivate.
+     */
+    set active(value) {
+        this._state.active = value !== false;
+        this.glRedraw();
+        this.fire("active", this._state.active);
+    }
+
+    /**
+     * Gets if this SectionPlane is active or not.
+     *
+     * Default value is ````true````.
+     *
+     * @returns {Boolean} Returns ````true```` if active.
+     */
+    get active() {
+        return this._state.active;
+    }
+
+    /**
+     * Sets the World-space position of this SectionPlane's plane.
+     *
+     * Default value is ````[0, 0, 0]````.
+     *
+     * @param {Number[]} value New position.
+     */
+    set pos(value) {
+        this._state.pos.set(value || [0, 0, 0]);
+        this._state.dist = (-math.dotVec3(this._state.pos, this._state.dir));
+        this.fire("pos", this._state.pos);
+    }
+
+    /**
+     * Gets the World-space position of this SectionPlane's plane.
+     *
+     * Default value is ````[0, 0, 0]````.
+     *
+     * @returns {Number[]} Current position.
+     */
+    get pos() {
+        return this._state.pos;
+    }
+
+    /**
+     * Sets the direction of this SectionPlane's plane.
+     *
+     * Default value is ````[0, 0, -1]````.
+     *
+     * @param {Number[]} value New direction.
+     */
+    set dir(value) {
+        this._state.dir.set(value || [0, 0, -1]);
+        this._state.dist = (-math.dotVec3(this._state.pos, this._state.dir));
+        this.glRedraw();
+        this.fire("dir", this._state.dir);
+    }
+
+    /**
+     * Gets the direction of this SectionPlane's plane.
+     *
+     * Default value is ````[0, 0, -1]````.
+     *
+     * @returns {Number[]} value Current direction.
+     */
+    get dir() {
+        return this._state.dir;
+    }
+
+    /**
+     * Gets this SectionPlane's distance to the origin of the World-space coordinate system.
+     *
+     * This is the dot product of {@link SectionPlane#pos} and {@link SectionPlane#dir} and is automatically re-calculated
+     * each time either of two properties are updated.
+     *
+     * @returns {Number}
+     */
+    get dist() {
+        return this._state.dist;
+    }
+
+    /**
+     * Inverts the direction of {@link SectionPlane#dir}.
+     */
+    flipDir() {
+        const dir = this._state.dir;
+        dir[0] *= -1.0;
+        dir[1] *= -1.0;
+        dir[2] *= -1.0;
+        this._state.dist = (-math.dotVec3(this._state.pos, this._state.dir));
+        this.fire("dir", this._state.dir);
+        this.glRedraw();
+    }
+
+    /**
+     * @destroy
+     */
+    destroy() {
+        this._state.destroy();
+        this.scene._sectionPlaneDestroyed(this);
+        super.destroy();
+    }
 }
 
 math.vec3();
@@ -60041,17 +60418,1381 @@ class PerformanceModel extends Component {
     }
 }
 
-math.vec4(4);
-math.vec4();
-math.vec4();
-math.vec3([1, 0, 0]);
-math.vec3([0, 1, 0]);
-math.vec3([0, 0, 1]);
+const angleAxis = math.vec4(4);
+const q1 = math.vec4();
+const q2 = math.vec4();
+const xAxis = math.vec3([1, 0, 0]);
+const yAxis = math.vec3([0, 1, 0]);
+const zAxis = math.vec3([0, 0, 1]);
 
-math.vec3(3);
-math.vec3(3);
+const veca = math.vec3(3);
+const vecb = math.vec3(3);
 
-math.identityMat4();
+const identityMat = math.identityMat4();
+
+/**
+ * @desc An {@link Entity} that is a scene graph node that can have child Nodes and {@link Mesh}es.
+ *
+ * ## Usage
+ *
+ * The example below is the same as the one given for {@link Mesh}, since the two classes work together. In this example,
+ * we'll create a scene graph in which a root Node represents a group and the {@link Mesh}s are leaves. Since Node
+ * implements {@link Entity}, we can designate the root Node as a model, causing it to be registered by its ID in {@link Scene#models}.
+ *
+ * Since {@link Mesh} also implements {@link Entity}, we can designate the leaf {@link Mesh}es as objects, causing them to
+ * be registered by their IDs in {@link Scene#objects}.
+ *
+ * We can then find those {@link Entity} types in {@link Scene#models} and {@link Scene#objects}.
+ *
+ * We can also update properties of our object-Meshes via calls to {@link Scene#setObjectsHighlighted} etc.
+ *
+ * [[Run this example](http://xeokit.github.io/xeokit-sdk/examples/#sceneRepresentation_SceneGraph)]
+ *
+ * ````javascript
+ * import {Viewer, Mesh, Node, PhongMaterial} from "xeokit-sdk.es.js";
+ *
+ * const viewer = new Viewer({
+ *     canvasId: "myCanvas"
+ * });
+ *
+ * viewer.scene.camera.eye = [-21.80, 4.01, 6.56];
+ * viewer.scene.camera.look = [0, -5.75, 0];
+ * viewer.scene.camera.up = [0.37, 0.91, -0.11];
+ *
+ * new Node(viewer.scene, {
+ *      id: "table",
+ *      isModel: true, // <---------- Node represents a model, so is registered by ID in viewer.scene.models
+ *      rotation: [0, 50, 0],
+ *      position: [0, 0, 0],
+ *      scale: [1, 1, 1],
+ *
+ *      children: [
+ *
+ *          new Mesh(viewer.scene, { // Red table leg
+ *              id: "redLeg",
+ *              isObject: true, // <------ Node represents an object, so is registered by ID in viewer.scene.objects
+ *              position: [-4, -6, -4],
+ *              scale: [1, 3, 1],
+ *              rotation: [0, 0, 0],
+ *              material: new PhongMaterial(viewer.scene, {
+ *                  diffuse: [1, 0.3, 0.3]
+ *              })
+ *          }),
+ *
+ *          new Mesh(viewer.scene, { // Green table leg
+ *              id: "greenLeg",
+ *              isObject: true, // <------ Node represents an object, so is registered by ID in viewer.scene.objects
+ *              position: [4, -6, -4],
+ *              scale: [1, 3, 1],
+ *              rotation: [0, 0, 0],
+ *              material: new PhongMaterial(viewer.scene, {
+ *                  diffuse: [0.3, 1.0, 0.3]
+ *              })
+ *          }),
+ *
+ *          new Mesh(viewer.scene, {// Blue table leg
+ *              id: "blueLeg",
+ *              isObject: true, // <------ Node represents an object, so is registered by ID in viewer.scene.objects
+ *              position: [4, -6, 4],
+ *              scale: [1, 3, 1],
+ *              rotation: [0, 0, 0],
+ *              material: new PhongMaterial(viewer.scene, {
+ *                  diffuse: [0.3, 0.3, 1.0]
+ *              })
+ *          }),
+ *
+ *          new Mesh(viewer.scene, {  // Yellow table leg
+ *              id: "yellowLeg",
+ *              isObject: true, // <------ Node represents an object, so is registered by ID in viewer.scene.objects
+ *              position: [-4, -6, 4],
+ *              scale: [1, 3, 1],
+ *              rotation: [0, 0, 0],
+ *              material: new PhongMaterial(viewer.scene, {
+ *                   diffuse: [1.0, 1.0, 0.0]
+ *              })
+ *          }),
+ *
+ *          new Mesh(viewer.scene, { // Purple table top
+ *              id: "tableTop",
+ *              isObject: true, // <------ Node represents an object, so is registered by ID in viewer.scene.objects
+ *              position: [0, -3, 0],
+ *              scale: [6, 0.5, 6],
+ *              rotation: [0, 0, 0],
+ *              material: new PhongMaterial(viewer.scene, {
+ *                  diffuse: [1.0, 0.3, 1.0]
+ *              })
+ *          })
+ *      ]
+ *  });
+ *
+ * // Find Nodes and Meshes by their IDs
+ *
+ * var table = viewer.scene.models["table"];                // Since table Node has isModel == true
+ *
+ * var redLeg = viewer.scene.objects["redLeg"];             // Since the Meshes have isObject == true
+ * var greenLeg = viewer.scene.objects["greenLeg"];
+ * var blueLeg = viewer.scene.objects["blueLeg"];
+ *
+ * // Highlight one of the table leg Meshes
+ *
+ * viewer.scene.setObjectsHighlighted(["redLeg"], true);    // Since the Meshes have isObject == true
+ *
+ * // Periodically update transforms on our Nodes and Meshes
+ *
+ * viewer.scene.on("tick", function () {
+ *
+ *       // Rotate legs
+ *       redLeg.rotateY(0.5);
+ *       greenLeg.rotateY(0.5);
+ *       blueLeg.rotateY(0.5);
+ *
+ *       // Rotate table
+ *       table.rotateY(0.5);
+ *       table.rotateX(0.3);
+ *   });
+ * ````
+ *
+ * ## Metadata
+ *
+ * As mentioned, we can also associate {@link MetaModel}s and {@link MetaObject}s with our Nodes and {@link Mesh}es,
+ * within a {@link MetaScene}. See {@link MetaScene} for an example.
+ *
+ * @implements {Entity}
+ */
+class Node$1 extends Component {
+
+    /**
+     * @constructor
+     * @param {Component} owner Owner component. When destroyed, the owner will destroy this component as well.
+     * @param {*} [cfg] Configs
+     * @param {String} [cfg.id] Optional ID, unique among all components in the parent scene, generated automatically when omitted.
+     * @param {Boolean} [cfg.isModel] Specify ````true```` if this Mesh represents a model, in which case the Mesh will be registered by {@link Mesh#id} in {@link Scene#models} and may also have a corresponding {@link MetaModel} with matching {@link MetaModel#id}, registered by that ID in {@link MetaScene#metaModels}.
+     * @param {Boolean} [cfg.isObject] Specify ````true```` if this Mesh represents an object, in which case the Mesh will be registered by {@link Mesh#id} in {@link Scene#objects} and may also have a corresponding {@link MetaObject} with matching {@link MetaObject#id}, registered by that ID in {@link MetaScene#metaObjects}.
+     * @param {Node} [cfg.parent] The parent Node.
+     * @param {Number[]} [cfg.origin] World-space origin for this Node.
+     * @param {Number[]} [cfg.rtcCenter] Deprecated - renamed to ````origin````.
+     * @param {Number[]} [cfg.position=[0,0,0]] Local 3D position.
+     * @param {Number[]} [cfg.scale=[1,1,1]] Local scale.
+     * @param {Number[]} [cfg.rotation=[0,0,0]] Local rotation, as Euler angles given in degrees, for each of the X, Y and Z axis.
+     * @param {Number[]} [cfg.matrix=[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1] Local modelling transform matrix. Overrides the position, scale and rotation parameters.
+     * @param {Number[]} [cfg.offset=[0,0,0]] World-space 3D translation offset. Translates the Node in World space, after modelling transforms.
+     * @param {Boolean} [cfg.visible=true] Indicates if the Node is initially visible.
+     * @param {Boolean} [cfg.culled=false] Indicates if the Node is initially culled from view.
+     * @param {Boolean} [cfg.pickable=true] Indicates if the Node is initially pickable.
+     * @param {Boolean} [cfg.clippable=true] Indicates if the Node is initially clippable.
+     * @param {Boolean} [cfg.collidable=true] Indicates if the Node is initially included in boundary calculations.
+     * @param {Boolean} [cfg.castsShadow=true] Indicates if the Node initially casts shadows.
+     * @param {Boolean} [cfg.receivesShadow=true]  Indicates if the Node initially receives shadows.
+     * @param {Boolean} [cfg.xrayed=false] Indicates if the Node is initially xrayed.
+     * @param {Boolean} [cfg.highlighted=false] Indicates if the Node is initially highlighted.
+     * @param {Boolean} [cfg.selected=false] Indicates if the Mesh is initially selected.
+     * @param {Boolean} [cfg.edges=false] Indicates if the Node's edges are initially emphasized.
+     * @param {Number[]} [cfg.colorize=[1.0,1.0,1.0]] Node's initial RGB colorize color, multiplies by the rendered fragment colors.
+     * @param {Number} [cfg.opacity=1.0] Node's initial opacity factor, multiplies by the rendered fragment alpha.
+     * @param {Array} [cfg.children] Child Nodes or {@link Mesh}es to add initially. Children must be in the same {@link Scene} and will be removed first from whatever parents they may already have.
+     * @param {Boolean} [cfg.inheritStates=true] Indicates if children given to this constructor should inherit rendering state from this parent as they are added. Rendering state includes {@link Node#visible}, {@link Node#culled}, {@link Node#pickable}, {@link Node#clippable}, {@link Node#castsShadow}, {@link Node#receivesShadow}, {@link Node#selected}, {@link Node#highlighted}, {@link Node#colorize} and {@link Node#opacity}.
+     */
+    constructor(owner, cfg = {}) {
+
+        super(owner, cfg);
+
+        this._parentNode = null;
+        this._children = [];
+
+        this._aabb = null;
+        this._aabbDirty = true;
+
+        this.scene._aabbDirty = true;
+
+        this._numTriangles = 0;
+
+        this._scale = math.vec3();
+        this._quaternion = math.identityQuaternion();
+        this._rotation = math.vec3();
+        this._position = math.vec3();
+        this._offset = math.vec3();
+
+        this._localMatrix = math.identityMat4();
+        this._worldMatrix = math.identityMat4();
+
+        this._localMatrixDirty = true;
+        this._worldMatrixDirty = true;
+
+        if (cfg.matrix) {
+            this.matrix = cfg.matrix;
+        } else {
+            this.scale = cfg.scale;
+            this.position = cfg.position;
+            if (cfg.quaternion) ; else {
+                this.rotation = cfg.rotation;
+            }
+        }
+
+        this._isModel = cfg.isModel;
+        if (this._isModel) {
+            this.scene._registerModel(this);
+        }
+
+        this._isObject = cfg.isObject;
+        if (this._isObject) {
+            this.scene._registerObject(this);
+        }
+
+        this.origin = cfg.origin;
+        this.visible = cfg.visible;
+        this.culled = cfg.culled;
+        this.pickable = cfg.pickable;
+        this.clippable = cfg.clippable;
+        this.collidable = cfg.collidable;
+        this.castsShadow = cfg.castsShadow;
+        this.receivesShadow = cfg.receivesShadow;
+        this.xrayed = cfg.xrayed;
+        this.highlighted = cfg.highlighted;
+        this.selected = cfg.selected;
+        this.edges = cfg.edges;
+        this.colorize = cfg.colorize;
+        this.opacity = cfg.opacity;
+        this.offset = cfg.offset;
+
+        // Add children, which inherit state from this Node
+
+        if (cfg.children) {
+            const children = cfg.children;
+            for (let i = 0, len = children.length; i < len; i++) {
+                this.addChild(children[i], cfg.inheritStates);
+            }
+        }
+
+        if (cfg.parentId) {
+            const parentNode = this.scene.components[cfg.parentId];
+            if (!parentNode) {
+                this.error("Parent not found: '" + cfg.parentId + "'");
+            } else if (!parentNode.isNode) {
+                this.error("Parent is not a Node: '" + cfg.parentId + "'");
+            } else {
+                parentNode.addChild(this);
+            }
+        } else if (cfg.parent) {
+            if (!cfg.parent.isNode) {
+                this.error("Parent is not a Node");
+            }
+            cfg.parent.addChild(this);
+        }
+    }
+
+    //------------------------------------------------------------------------------------------------------------------
+    // Entity members
+    //------------------------------------------------------------------------------------------------------------------
+
+    /**
+     * Returns true to indicate that this Component is an Entity.
+     * @type {Boolean}
+     */
+    get isEntity() {
+        return true;
+    }
+
+    /**
+     * Returns ````true```` if this Mesh represents a model.
+     *
+     * When this returns ````true````, the Mesh will be registered by {@link Mesh#id} in {@link Scene#models} and
+     * may also have a corresponding {@link MetaModel}.
+     *
+     * @type {Boolean}
+     */
+    get isModel() {
+        return this._isModel;
+    }
+
+    /**
+     * Returns ````true```` if this Node represents an object.
+     *
+     * When ````true```` the Node will be registered by {@link Node#id} in
+     * {@link Scene#objects} and may also have a {@link MetaObject} with matching {@link MetaObject#id}.
+     *
+     * @type {Boolean}
+     * @abstract
+     */
+    get isObject() {
+        return this._isObject;
+    }
+
+    /**
+     * Gets the Node's World-space 3D axis-aligned bounding box.
+     *
+     * Represented by a six-element Float64Array containing the min/max extents of the
+     * axis-aligned volume, ie. ````[xmin, ymin,zmin,xmax,ymax, zmax]````.
+     *
+     * @type {Number[]}
+     */
+    get aabb() {
+        if (this._aabbDirty) {
+            this._updateAABB();
+        }
+        return this._aabb;
+    }
+
+    /**
+     * Sets the World-space origin for this Node.
+     *
+     * @type {Float64Array}
+     */
+    set origin(origin) {
+        if (origin) {
+            if (!this._origin) {
+                this._origin = math.vec3();
+            }
+            this._origin.set(origin);
+        } else {
+            if (this._origin) {
+                this._origin = null;
+            }
+        }
+        for (let i = 0, len = this._children.length; i < len; i++) {
+            this._children[i].origin = origin;
+        }
+        this.glRedraw();
+    }
+
+    /**
+     *  Gets the World-space origin for this Node.
+     *
+     * @type {Float64Array}
+     */
+    get origin() {
+        return this._origin;
+    }
+
+    /**
+     * Sets the World-space origin for this Node.
+     *
+     * Deprecated and replaced by {@link Node#origin}.
+     *
+     * @deprecated
+     * @type {Float64Array}
+     */
+    set rtcCenter(rtcCenter) {
+        this.origin = rtcCenter;
+    }
+
+    /**
+     * Gets the World-space origin for this Node.
+     *
+     * Deprecated and replaced by {@link Node#origin}.
+     *
+     * @deprecated
+     * @type {Float64Array}
+     */
+    get rtcCenter() {
+        return this.origin;
+    }
+
+    /**
+     * The number of triangles in this Node.
+     *
+     * @type {Number}
+     */
+    get numTriangles() {
+        return this._numTriangles;
+    }
+
+    /**
+     * Sets if this Node and all child Nodes and {@link Mesh}es are visible.
+     *
+     * Only rendered both {@link Node#visible} is ````true```` and {@link Node#culled} is ````false````.
+     *
+     * When {@link Node#isObject} and {@link Node#visible} are both ````true```` the Node will be
+     * registered by {@link Node#id} in {@link Scene#visibleObjects}.
+     *
+     * @type {Boolean}
+     */
+    set visible(visible) {
+        visible = visible !== false;
+        this._visible = visible;
+        for (let i = 0, len = this._children.length; i < len; i++) {
+            this._children[i].visible = visible;
+        }
+        if (this._isObject) {
+            this.scene._objectVisibilityUpdated(this, visible);
+        }
+    }
+
+    /**
+     * Gets if this Node is visible.
+     *
+     * Child Nodes and {@link Mesh}es may have different values for this property.
+     *
+     * When {@link Node#isObject} and {@link Node#visible} are both ````true```` the Node will be
+     * registered by {@link Node#id} in {@link Scene#visibleObjects}.
+     *
+     * @type {Boolean}
+     */
+    get visible() {
+        return this._visible;
+    }
+
+    /**
+     * Sets if this Node and all child Nodes and {@link Mesh}es are xrayed.
+     *
+     * When {@link Node#isObject} and {@link Node#xrayed} are both ````true```` the Node will be
+     * registered by {@link Node#id} in {@link Scene#xrayedObjects}.
+     *
+     * @type {Boolean}
+     */
+    set xrayed(xrayed) {
+        xrayed = !!xrayed;
+        this._xrayed = xrayed;
+        for (let i = 0, len = this._children.length; i < len; i++) {
+            this._children[i].xrayed = xrayed;
+        }
+        if (this._isObject) {
+            this.scene._objectXRayedUpdated(this, xrayed);
+        }
+    }
+
+    /**
+     * Gets if this Node is xrayed.
+     *
+     * When {@link Node#isObject} and {@link Node#xrayed} are both ````true```` the Node will be
+     * registered by {@link Node#id} in {@link Scene#xrayedObjects}.
+     *
+     * Child Nodes and {@link Mesh}es may have different values for this property.
+     *
+     * @type {Boolean}
+     */
+    get xrayed() {
+        return this._xrayed;
+    }
+
+    /**
+     * Sets if this Node and all child Nodes and {@link Mesh}es are highlighted.
+     *
+     * When {@link Node#isObject} and {@link Node#highlighted} are both ````true```` the Node will be
+     * registered by {@link Node#id} in {@link Scene#highlightedObjects}.
+     *
+     * @type {Boolean}
+     */
+    set highlighted(highlighted) {
+        highlighted = !!highlighted;
+        this._highlighted = highlighted;
+        for (let i = 0, len = this._children.length; i < len; i++) {
+            this._children[i].highlighted = highlighted;
+        }
+        if (this._isObject) {
+            this.scene._objectHighlightedUpdated(this, highlighted);
+        }
+    }
+
+    /**
+     * Gets if this Node is highlighted.
+     *
+     * When {@link Node#isObject} and {@link Node#highlighted} are both ````true```` the Node will be
+     * registered by {@link Node#id} in {@link Scene#highlightedObjects}.
+     *
+     * Child Nodes and {@link Mesh}es may have different values for this property.
+     *
+     * @type {Boolean}
+     */
+    get highlighted() {
+        return this._highlighted;
+    }
+
+    /**
+     * Sets if this Node and all child Nodes and {@link Mesh}es are selected.
+     *
+     * When {@link Node#isObject} and {@link Node#selected} are both ````true```` the Node will be
+     * registered by {@link Node#id} in {@link Scene#selectedObjects}.
+     *
+     * @type {Boolean}
+     */
+    set selected(selected) {
+        selected = !!selected;
+        this._selected = selected;
+        for (let i = 0, len = this._children.length; i < len; i++) {
+            this._children[i].selected = selected;
+        }
+        if (this._isObject) {
+            this.scene._objectSelectedUpdated(this, selected);
+        }
+    }
+
+    /**
+     * Gets if this Node is selected.
+     *
+     * When {@link Node#isObject} and {@link Node#selected} are both ````true```` the Node will be
+     * registered by {@link Node#id} in {@link Scene#selectedObjects}.
+     *
+     * Child Nodes and {@link Mesh}es may have different values for this property.
+     *
+     * @type {Boolean}
+     */
+    get selected() {
+        return this._selected;
+    }
+
+    /**
+     * Sets if this Node and all child Nodes and {@link Mesh}es are edge-enhanced.
+     *
+     * @type {Boolean}
+     */
+    set edges(edges) {
+        edges = !!edges;
+        this._edges = edges;
+        for (let i = 0, len = this._children.length; i < len; i++) {
+            this._children[i].edges = edges;
+        }
+    }
+
+    /**
+     * Gets if this Node's edges are enhanced.
+     *
+     * Child Nodes and {@link Mesh}es may have different values for this property.
+     *
+     * @type {Boolean}
+     */
+    get edges() {
+        return this._edges;
+    }
+
+    /**
+     * Sets if this Node and all child Nodes and {@link Mesh}es are culled.
+     *
+     * @type {Boolean}
+     */
+    set culled(culled) {
+        culled = !!culled;
+        this._culled = culled;
+        for (let i = 0, len = this._children.length; i < len; i++) {
+            this._children[i].culled = culled;
+        }
+    }
+
+    /**
+     * Gets if this Node is culled.
+     *
+     * @type {Boolean}
+     */
+    get culled() {
+        return this._culled;
+    }
+
+    /**
+     * Sets if this Node and all child Nodes and {@link Mesh}es are clippable.
+     *
+     * Clipping is done by the {@link SectionPlane}s in {@link Scene#clips}.
+     *
+     * @type {Boolean}
+     */
+    set clippable(clippable) {
+        clippable = clippable !== false;
+        this._clippable = clippable;
+        for (let i = 0, len = this._children.length; i < len; i++) {
+            this._children[i].clippable = clippable;
+        }
+    }
+
+    /**
+     * Gets if this Node is clippable.
+     *
+     * Clipping is done by the {@link SectionPlane}s in {@link Scene#clips}.
+     *
+     * Child Nodes and {@link Mesh}es may have different values for this property.
+     *
+     * @type {Boolean}
+     */
+    get clippable() {
+        return this._clippable;
+    }
+
+    /**
+     * Sets if this Node and all child Nodes and {@link Mesh}es are included in boundary calculations.
+     *
+     * @type {Boolean}
+     */
+    set collidable(collidable) {
+        collidable = collidable !== false;
+        this._collidable = collidable;
+        for (let i = 0, len = this._children.length; i < len; i++) {
+            this._children[i].collidable = collidable;
+        }
+    }
+
+    /**
+     * Gets if this Node is included in boundary calculations.
+     *
+     * Child Nodes and {@link Mesh}es may have different values for this property.
+     *
+     * @type {Boolean}
+     */
+    get collidable() {
+        return this._collidable;
+    }
+
+    /**
+     * Sets if this Node and all child Nodes and {@link Mesh}es are pickable.
+     *
+     * Picking is done via calls to {@link Scene#pick}.
+     *
+     * @type {Boolean}
+     */
+    set pickable(pickable) {
+        pickable = pickable !== false;
+        this._pickable = pickable;
+        for (let i = 0, len = this._children.length; i < len; i++) {
+            this._children[i].pickable = pickable;
+        }
+    }
+
+    /**
+     * Gets if to this Node is pickable.
+     *
+     * Picking is done via calls to {@link Scene#pick}.
+     *
+     * Child Nodes and {@link Mesh}es may have different values for this property.
+     *
+     * @type {Boolean}
+     */
+    get pickable() {
+        return this._pickable;
+    }
+
+    /**
+     * Sets the RGB colorize color for this Node and all child Nodes and {@link Mesh}es}.
+     *
+     * Multiplies by rendered fragment colors.
+     *
+     * Each element of the color is in range ````[0..1]````.
+     *
+     * @type {Number[]}
+     */
+    set colorize(rgb) {
+        let colorize = this._colorize;
+        if (!colorize) {
+            colorize = this._colorize = new Float32Array(4);
+            colorize[3] = 1.0;
+        }
+        if (rgb) {
+            colorize[0] = rgb[0];
+            colorize[1] = rgb[1];
+            colorize[2] = rgb[2];
+        } else {
+            colorize[0] = 1;
+            colorize[1] = 1;
+            colorize[2] = 1;
+        }
+        for (let i = 0, len = this._children.length; i < len; i++) {
+            this._children[i].colorize = colorize;
+        }
+        if (this._isObject) {
+            const colorized = (!!rgb);
+            this.scene._objectColorizeUpdated(this, colorized);
+        }
+    }
+
+    /**
+     * Gets the RGB colorize color for this Node.
+     *
+     * Each element of the color is in range ````[0..1]````.
+     *
+     * Child Nodes and {@link Mesh}es may have different values for this property.
+     *
+     * @type {Number[]}
+     */
+    get colorize() {
+        return this._colorize.slice(0, 3);
+    }
+
+    /**
+     * Sets the opacity factor for this Node and all child Nodes and {@link Mesh}es.
+     *
+     * This is a factor in range ````[0..1]```` which multiplies by the rendered fragment alphas.
+     *
+     * @type {Number}
+     */
+    set opacity(opacity) {
+        let colorize = this._colorize;
+        if (!colorize) {
+            colorize = this._colorize = new Float32Array(4);
+            colorize[0] = 1;
+            colorize[1] = 1;
+            colorize[2] = 1;
+        }
+        colorize[3] = opacity !== null && opacity !== undefined ? opacity : 1.0;
+        for (let i = 0, len = this._children.length; i < len; i++) {
+            this._children[i].opacity = opacity;
+        }
+        if (this._isObject) {
+            const opacityUpdated = (opacity !== null && opacity !== undefined);
+            this.scene._objectOpacityUpdated(this, opacityUpdated);
+        }
+    }
+
+    /**
+     * Gets this Node's opacity factor.
+     *
+     * This is a factor in range ````[0..1]```` which multiplies by the rendered fragment alphas.
+     *
+     * Child Nodes and {@link Mesh}es may have different values for this property.
+     *
+     * @type {Number}
+     */
+    get opacity() {
+        return this._colorize[3];
+    }
+
+    /**
+     * Sets if this Node and all child Nodes and {@link Mesh}es cast shadows.
+     *
+     * @type {Boolean}
+     */
+    set castsShadow(castsShadow) {
+        castsShadow = !!castsShadow;
+        this._castsShadow = castsShadow;
+        for (let i = 0, len = this._children.length; i < len; i++) {
+            this._children[i].castsShadow = castsShadow;
+        }
+    }
+
+    /**
+     * Gets if this Node casts shadows.
+     *
+     * Child Nodes and {@link Mesh}es may have different values for this property.
+     *
+     * @type {Boolean}
+     */
+    get castsShadow() {
+        return this._castsShadow;
+    }
+
+    /**
+     * Sets if this Node and all child Nodes and {@link Mesh}es can have shadows cast upon them.
+     *
+     * @type {Boolean}
+     */
+    set receivesShadow(receivesShadow) {
+        receivesShadow = !!receivesShadow;
+        this._receivesShadow = receivesShadow;
+        for (let i = 0, len = this._children.length; i < len; i++) {
+            this._children[i].receivesShadow = receivesShadow;
+        }
+    }
+
+    /**
+     * Whether or not to this Node can have shadows cast upon it.
+     *
+     * Child Nodes and {@link Mesh}es may have different values for this property.
+     *
+     * @type {Boolean}
+     */
+    get receivesShadow() {
+        return this._receivesShadow;
+    }
+
+    /**
+     * Gets if this Node can have Scalable Ambient Obscurance (SAO) applied to it.
+     *
+     * SAO is configured by {@link SAO}.
+     *
+     * @type {Boolean}
+     * @abstract
+     */
+    get saoEnabled() {
+        return false; // TODO: Support SAO on Nodes
+    }
+
+
+    /**
+     * Sets the 3D World-space offset for this Node and all child Nodes and {@link Mesh}es}.
+     *
+     * The offset dynamically translates those components in World-space.
+     *
+     * Default value is ````[0, 0, 0]````.
+     *
+     * Note that child Nodes and {@link Mesh}es may subsequently be given different values for this property.
+     *
+     * @type {Number[]}
+     */
+    set offset(offset) {
+        if (offset) {
+            this._offset[0] = offset[0];
+            this._offset[1] = offset[1];
+            this._offset[2] = offset[2];
+        } else {
+            this._offset[0] = 0;
+            this._offset[1] = 0;
+            this._offset[2] = 0;
+        }
+        for (let i = 0, len = this._children.length; i < len; i++) {
+            this._children[i].offset = this._offset;
+        }
+        if (this._isObject) {
+            this.scene._objectOffsetUpdated(this, offset);
+        }
+    }
+
+    /**
+     * Gets the Node's 3D World-space offset.
+     *
+     * Default value is ````[0, 0, 0]````.
+     *
+     * Child Nodes and {@link Mesh}es may have different values for this property.
+     *
+     * @type {Number[]}
+     */
+    get offset() {
+        return this._offset;
+    }
+
+
+    //------------------------------------------------------------------------------------------------------------------
+    // Node members
+    //------------------------------------------------------------------------------------------------------------------
+
+    /**
+     * Returns true to indicate that this Component is a Node.
+     * @type {Boolean}
+     */
+    get isNode() {
+        return true;
+    }
+
+    _setLocalMatrixDirty() {
+        this._localMatrixDirty = true;
+        this._setWorldMatrixDirty();
+    }
+
+    _setWorldMatrixDirty() {
+        this._worldMatrixDirty = true;
+        for (let i = 0, len = this._children.length; i < len; i++) {
+            this._children[i]._setWorldMatrixDirty();
+        }
+    }
+
+    _buildWorldMatrix() {
+        const localMatrix = this.matrix;
+        if (!this._parentNode) {
+            for (let i = 0, len = localMatrix.length; i < len; i++) {
+                this._worldMatrix[i] = localMatrix[i];
+            }
+        } else {
+            math.mulMat4(this._parentNode.worldMatrix, localMatrix, this._worldMatrix);
+        }
+        this._worldMatrixDirty = false;
+    }
+
+    _setSubtreeAABBsDirty(node) {
+        node._aabbDirty = true;
+        if (node._children) {
+            for (let i = 0, len = node._children.length; i < len; i++) {
+                this._setSubtreeAABBsDirty(node._children[i]);
+            }
+        }
+    }
+
+    _setAABBDirty() {
+        this._setSubtreeAABBsDirty(this);
+        if (this.collidable) {
+            for (let node = this; node; node = node._parentNode) {
+                node._aabbDirty = true;
+            }
+        }
+    }
+
+    _updateAABB() {
+        this.scene._aabbDirty = true;
+        if (!this._aabb) {
+            this._aabb = math.AABB3();
+        }
+        if (this._buildAABB) {
+            this._buildAABB(this.worldMatrix, this._aabb); // Mesh or PerformanceModel
+        } else { // Node | Node | Model
+            math.collapseAABB3(this._aabb);
+            let node;
+            for (let i = 0, len = this._children.length; i < len; i++) {
+                node = this._children[i];
+                if (!node.collidable) {
+                    continue;
+                }
+                math.expandAABB3(this._aabb, node.aabb);
+            }
+        }
+        this._aabbDirty = false;
+    }
+
+    /**
+     * Adds a child Node or {@link Mesh}.
+     *
+     * The child must be a Node or {@link Mesh} in the same {@link Scene}.
+     *
+     * If the child already has a parent, will be removed from that parent first.
+     *
+     * Does nothing if already a child.
+     *
+     * @param {Node|Mesh|String} child Instance or ID of the child to add.
+     * @param [inheritStates=false] Indicates if the child should inherit rendering states from this parent as it is added. Rendering state includes {@link Node#visible}, {@link Node#culled}, {@link Node#pickable}, {@link Node#clippable}, {@link Node#castsShadow}, {@link Node#receivesShadow}, {@link Node#selected}, {@link Node#highlighted}, {@link Node#colorize} and {@link Node#opacity}.
+     * @returns {Node|Mesh} The child.
+     */
+    addChild(child, inheritStates) {
+        if (utils.isNumeric(child) || utils.isString(child)) {
+            const nodeId = child;
+            child = this.scene.component[nodeId];
+            if (!child) {
+                this.warn("Component not found: " + utils.inQuotes(nodeId));
+                return;
+            }
+            if (!child.isNode && !child.isMesh) {
+                this.error("Not a Node or Mesh: " + nodeId);
+                return;
+            }
+        } else {
+            if (!child.isNode && !child.isMesh) {
+                this.error("Not a Node or Mesh: " + child.id);
+                return;
+            }
+            if (child._parentNode) {
+                if (child._parentNode.id === this.id) {
+                    this.warn("Already a child: " + child.id);
+                    return;
+                }
+                child._parentNode.removeChild(child);
+            }
+        }
+        child.id;
+        if (child.scene.id !== this.scene.id) {
+            this.error("Child not in same Scene: " + child.id);
+            return;
+        }
+        this._children.push(child);
+        child._parentNode = this;
+        if (!!inheritStates) {
+            child.visible = this.visible;
+            child.culled = this.culled;
+            child.xrayed = this.xrayed;
+            child.highlited = this.highlighted;
+            child.selected = this.selected;
+            child.edges = this.edges;
+            child.clippable = this.clippable;
+            child.pickable = this.pickable;
+            child.collidable = this.collidable;
+            child.castsShadow = this.castsShadow;
+            child.receivesShadow = this.receivesShadow;
+            child.colorize = this.colorize;
+            child.opacity = this.opacity;
+            child.offset = this.offset;
+        }
+        child._setWorldMatrixDirty();
+        child._setAABBDirty();
+        this._numTriangles += child.numTriangles;
+        return child;
+    }
+
+    /**
+     * Removes the given child Node or {@link Mesh}.
+     *
+     * @param {Node|Mesh} child Child to remove.
+     */
+    removeChild(child) {
+        for (let i = 0, len = this._children.length; i < len; i++) {
+            if (this._children[i].id === child.id) {
+                child._parentNode = null;
+                this._children = this._children.splice(i, 1);
+                child._setWorldMatrixDirty();
+                child._setAABBDirty();
+                this._setAABBDirty();
+                this._numTriangles -= child.numTriangles;
+                return;
+            }
+        }
+    }
+
+    /**
+     * Removes all child Nodes and {@link Mesh}es.
+     */
+    removeChildren() {
+        let child;
+        for (let i = 0, len = this._children.length; i < len; i++) {
+            child = this._children[i];
+            child._parentNode = null;
+            child._setWorldMatrixDirty();
+            child._setAABBDirty();
+            this._numTriangles -= child.numTriangles;
+        }
+        this._children = [];
+        this._setAABBDirty();
+    }
+
+    /**
+     * Number of child Nodes or {@link Mesh}es.
+     *
+     * @type {Number}
+     */
+    get numChildren() {
+        return this._children.length;
+    }
+
+    /**
+     * Array of child Nodes or {@link Mesh}es.
+     *
+     * @type {Array}
+     */
+    get children() {
+        return this._children;
+    }
+
+    /**
+     * The parent Node.
+     *
+     * The parent Node may also be set by passing the Node to the parent's {@link Node#addChild} method.
+     *
+     * @type {Node}
+     */
+    set parent(node) {
+        if (utils.isNumeric(node) || utils.isString(node)) {
+            const nodeId = node;
+            node = this.scene.components[nodeId];
+            if (!node) {
+                this.warn("Node not found: " + utils.inQuotes(nodeId));
+                return;
+            }
+            if (!node.isNode) {
+                this.error("Not a Node: " + node.id);
+                return;
+            }
+        }
+        if (node.scene.id !== this.scene.id) {
+            this.error("Node not in same Scene: " + node.id);
+            return;
+        }
+        if (this._parentNode && this._parentNode.id === node.id) {
+            this.warn("Already a child of Node: " + node.id);
+            return;
+        }
+        node.addChild(this);
+    }
+
+    /**
+     * The parent Node.
+     *
+     * @type {Node}
+     */
+    get parent() {
+        return this._parentNode;
+    }
+
+    /**
+     * Sets the Node's local translation.
+     *
+     * Default value is ````[0,0,0]````.
+     *
+     * @type {Number[]}
+     */
+    set position(value) {
+        this._position.set(value || [0, 0, 0]);
+        this._setLocalMatrixDirty();
+        this._setAABBDirty();
+        this.glRedraw();
+    }
+
+    /**
+     * Gets the Node's local translation.
+     *
+     * Default value is ````[0,0,0]````.
+     *
+     * @type {Number[]}
+     */
+    get position() {
+        return this._position;
+    }
+
+    /**
+     * Sets the Node's local rotation, as Euler angles given in degrees, for each of the X, Y and Z axis.
+     *
+     * Default value is ````[0,0,0]````.
+     *
+     * @type {Number[]}
+     */
+    set rotation(value) {
+        this._rotation.set(value || [0, 0, 0]);
+        math.eulerToQuaternion(this._rotation, "XYZ", this._quaternion);
+        this._setLocalMatrixDirty();
+        this._setAABBDirty();
+        this.glRedraw();
+    }
+
+    /**
+     * Gets the Node's local rotation, as Euler angles given in degrees, for each of the X, Y and Z axis.
+     *
+     * Default value is ````[0,0,0]````.
+     *
+     * @type {Number[]}
+     */
+    get rotation() {
+        return this._rotation;
+    }
+
+    /**
+     * Sets the Node's local rotation quaternion.
+     *
+     * Default value is ````[0,0,0,1]````.
+     *
+     * @type {Number[]}
+     */
+    set quaternion(value) {
+        this._quaternion.set(value || [0, 0, 0, 1]);
+        math.quaternionToEuler(this._quaternion, "XYZ", this._rotation);
+        this._setLocalMatrixDirty();
+        this._setAABBDirty();
+        this.glRedraw();
+    }
+
+    /**
+     * Gets the Node's local rotation quaternion.
+     *
+     * Default value is ````[0,0,0,1]````.
+     *
+     * @type {Number[]}
+     */
+    get quaternion() {
+        return this._quaternion;
+    }
+
+    /**
+     * Sets the Node's local scale.
+     *
+     * Default value is ````[1,1,1]````.
+     *
+     * @type {Number[]}
+     */
+    set scale(value) {
+        this._scale.set(value || [1, 1, 1]);
+        this._setLocalMatrixDirty();
+        this._setAABBDirty();
+        this.glRedraw();
+    }
+
+    /**
+     * Gets the Node's local scale.
+     *
+     * Default value is ````[1,1,1]````.
+     *
+     * @type {Number[]}
+     */
+    get scale() {
+        return this._scale;
+    }
+
+    /**
+     * Sets the Node's local modeling transform matrix.
+     *
+     * Default value is ````[1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]````.
+     *
+     * @type {Number[]}
+     */
+    set matrix(value) {
+        if (!this._localMatrix) {
+            this._localMatrix = math.identityMat4();
+        }
+        this._localMatrix.set(value || identityMat);
+        math.decomposeMat4(this._localMatrix, this._position, this._quaternion, this._scale);
+        this._localMatrixDirty = false;
+        this._setWorldMatrixDirty();
+        this._setAABBDirty();
+        this.glRedraw();
+    }
+
+    /**
+     * Gets the Node's local modeling transform matrix.
+     *
+     * Default value is ````[1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]````.
+     *
+     * @type {Number[]}
+     */
+    get matrix() {
+        if (this._localMatrixDirty) {
+            if (!this._localMatrix) {
+                this._localMatrix = math.identityMat4();
+            }
+            math.composeMat4(this._position, this._quaternion, this._scale, this._localMatrix);
+            this._localMatrixDirty = false;
+        }
+        return this._localMatrix;
+    }
+
+    /**
+     * Gets the Node's World matrix.
+     *
+     * @property worldMatrix
+     * @type {Number[]}
+     */
+    get worldMatrix() {
+        if (this._worldMatrixDirty) {
+            this._buildWorldMatrix();
+        }
+        return this._worldMatrix;
+    }
+
+    /**
+     * Rotates the Node about the given local axis by the given increment.
+     *
+     * @param {Number[]} axis Local axis about which to rotate.
+     * @param {Number} angle Angle increment in degrees.
+     */
+    rotate(axis, angle) {
+        angleAxis[0] = axis[0];
+        angleAxis[1] = axis[1];
+        angleAxis[2] = axis[2];
+        angleAxis[3] = angle * math.DEGTORAD;
+        math.angleAxisToQuaternion(angleAxis, q1);
+        math.mulQuaternions(this.quaternion, q1, q2);
+        this.quaternion = q2;
+        this._setLocalMatrixDirty();
+        this._setAABBDirty();
+        this.glRedraw();
+        return this;
+    }
+
+    /**
+     * Rotates the Node about the given World-space axis by the given increment.
+     *
+     * @param {Number[]} axis Local axis about which to rotate.
+     * @param {Number} angle Angle increment in degrees.
+     */
+    rotateOnWorldAxis(axis, angle) {
+        angleAxis[0] = axis[0];
+        angleAxis[1] = axis[1];
+        angleAxis[2] = axis[2];
+        angleAxis[3] = angle * math.DEGTORAD;
+        math.angleAxisToQuaternion(angleAxis, q1);
+        math.mulQuaternions(q1, this.quaternion, q1);
+        //this.quaternion.premultiply(q1);
+        return this;
+    }
+
+    /**
+     * Rotates the Node about the local X-axis by the given increment.
+     *
+     * @param {Number} angle Angle increment in degrees.
+     */
+    rotateX(angle) {
+        return this.rotate(xAxis, angle);
+    }
+
+    /**
+     * Rotates the Node about the local Y-axis by the given increment.
+     *
+     * @param {Number} angle Angle increment in degrees.
+     */
+    rotateY(angle) {
+        return this.rotate(yAxis, angle);
+    }
+
+    /**
+     * Rotates the Node about the local Z-axis by the given increment.
+     *
+     * @param {Number} angle Angle increment in degrees.
+     */
+    rotateZ(angle) {
+        return this.rotate(zAxis, angle);
+    }
+
+    /**
+     * Translates the Node along local space vector by the given increment.
+     *
+     * @param {Number[]} axis Normalized local space 3D vector along which to translate.
+     * @param {Number} distance Distance to translate along  the vector.
+     */
+    translate(axis, distance) {
+        math.vec3ApplyQuaternion(this.quaternion, axis, veca);
+        math.mulVec3Scalar(veca, distance, vecb);
+        math.addVec3(this.position, vecb, this.position);
+        this._setLocalMatrixDirty();
+        this._setAABBDirty();
+        this.glRedraw();
+        return this;
+    }
+
+    /**
+     * Translates the Node along the local X-axis by the given increment.
+     *
+     * @param {Number} distance Distance to translate along  the X-axis.
+     */
+    translateX(distance) {
+        return this.translate(xAxis, distance);
+    }
+
+    /**
+     * Translates the Node along the local Y-axis by the given increment.
+     *
+     * @param {Number} distance Distance to translate along  the Y-axis.
+     */
+    translateY(distance) {
+        return this.translate(yAxis, distance);
+    }
+
+    /**
+     * Translates the Node along the local Z-axis by the given increment.
+     *
+     * @param {Number} distance Distance to translate along  the Z-axis.
+     */
+    translateZ(distance) {
+        return this.translate(zAxis, distance);
+    }
+
+    //------------------------------------------------------------------------------------------------------------------
+    // Component members
+    //------------------------------------------------------------------------------------------------------------------
+
+    /**
+     @private
+     */
+    get type() {
+        return "Node";
+    }
+
+    /**
+     * Destroys this Node.
+     */
+    destroy() {
+        super.destroy();
+        if (this._parentNode) {
+            this._parentNode.removeChild(this);
+        }
+        if (this._isObject) {
+            this.scene._deregisterObject(this);
+            if (this._visible) {
+                this.scene._objectVisibilityUpdated(this, false);
+            }
+            if (this._xrayed) {
+                this.scene._objectXRayedUpdated(this, false);
+            }
+            if (this._selected) {
+                this.scene._objectSelectedUpdated(this, false);
+            }
+            if (this._highlighted) {
+                this.scene._objectHighlightedUpdated(this, false);
+            }
+            this.scene._objectColorizeUpdated(this, false);
+            this.scene._objectOpacityUpdated(this, false);
+            this.scene._objectOffsetUpdated(this, false);
+        }
+        if (this._isModel) {
+            this.scene._deregisterModel(this);
+        }
+        if (this._children.length) {
+            // Clone the _children before iterating, so our children don't mess us up when calling removeChild().
+            const tempChildList = this._children.splice();
+            let child;
+            for (let i = 0, len = tempChildList.length; i < len; i++) {
+                child = tempChildList[i];
+                child.destroy();
+            }
+        }
+        this._children = [];
+        this._setAABBDirty();
+        this.scene._aabbDirty = true;
+    }
+
+}
 math.AABB3();
 
 function ensureImageSizePowerOfTwo$1(image) {
@@ -63401,8 +65142,2262 @@ class NavCubePlugin extends Plugin {
 
 math.vec3();
 
-math.AABB3();
-math.vec3();
+/**
+ * @desc Creates a torus-shaped {@link Geometry}.
+ *
+ * ## Usage
+ * Creating a {@link Mesh} with a torus-shaped {@link ReadableGeometry} :
+ *
+ * [[Run this example](http://xeokit.github.io/xeokit-sdk/examples/#geometry_builders_buildTorusGeometry)]
+ * 
+ * ````javascript
+ * import {Viewer, Mesh, buildTorusGeometry, ReadableGeometry, PhongMaterial, Texture} from "xeokit-sdk.es.js";
+ *
+ * const viewer = new Viewer({
+ *      canvasId: "myCanvas"
+ * });
+ *
+ * viewer.camera.eye = [0, 0, 5];
+ * viewer.camera.look = [0, 0, 0];
+ * viewer.camera.up = [0, 1, 0];
+ *
+ * new Mesh(viewer.scene, {
+ *      geometry: new ReadableGeometry(viewer.scene, buildTorusGeometry({
+ *          center: [0,0,0],
+ *          radius: 1.0,
+ *          tube: 0.5,
+ *          radialSegments: 32,
+ *          tubeSegments: 24,
+ *          arc: Math.PI * 2.0
+ *      }),
+ *      material: new PhongMaterial(viewer.scene, {
+ *         diffuseMap: new Texture(viewer.scene, {
+ *             src: "textures/diffuse/uvGrid2.jpg"
+ *         })
+ *      })
+ * });
+ * ````
+ *
+ * @function buildTorusGeometry
+ * @param {*} [cfg] Configs
+ * @param {String} [cfg.id] Optional ID for the {@link Geometry}, unique among all components in the parent {@link Scene}, generated automatically when omitted.
+ * @param {Number[]} [cfg.center] 3D point indicating the center position.
+ * @param {Number} [cfg.radius=1] The overall radius.
+ * @param {Number} [cfg.tube=0.3] The tube radius.
+ * @param {Number} [cfg.radialSegments=32] The number of radial segments.
+ * @param {Number} [cfg.tubeSegments=24] The number of tubular segments.
+ * @param {Number} [cfg.arc=Math.PI*0.5] The length of the arc in radians, where Math.PI*2 is a closed torus.
+ * @returns {Object} Configuration for a {@link Geometry} subtype.
+ */
+function buildTorusGeometry(cfg = {}) {
+
+    let radius = cfg.radius || 1;
+    if (radius < 0) {
+        console.error("negative radius not allowed - will invert");
+        radius *= -1;
+    }
+    radius *= 0.5;
+
+    let tube = cfg.tube || 0.3;
+    if (tube < 0) {
+        console.error("negative tube not allowed - will invert");
+        tube *= -1;
+    }
+
+    let radialSegments = cfg.radialSegments || 32;
+    if (radialSegments < 0) {
+        console.error("negative radialSegments not allowed - will invert");
+        radialSegments *= -1;
+    }
+    if (radialSegments < 4) {
+        radialSegments = 4;
+    }
+
+    let tubeSegments = cfg.tubeSegments || 24;
+    if (tubeSegments < 0) {
+        console.error("negative tubeSegments not allowed - will invert");
+        tubeSegments *= -1;
+    }
+    if (tubeSegments < 4) {
+        tubeSegments = 4;
+    }
+
+    let arc = cfg.arc || Math.PI * 2;
+    if (arc < 0) {
+        console.warn("negative arc not allowed - will invert");
+        arc *= -1;
+    }
+    if (arc > 360) {
+        arc = 360;
+    }
+
+    const center = cfg.center;
+    let centerX = center ? center[0] : 0;
+    let centerY = center ? center[1] : 0;
+    const centerZ = center ? center[2] : 0;
+
+    const positions = [];
+    const normals = [];
+    const uvs = [];
+    const indices = [];
+
+    let u;
+    let v;
+    let x;
+    let y;
+    let z;
+    let vec;
+
+    let i;
+    let j;
+
+    for (j = 0; j <= tubeSegments; j++) {
+        for (i = 0; i <= radialSegments; i++) {
+
+            u = i / radialSegments * arc;
+            v = 0.785398 + (j / tubeSegments * Math.PI * 2);
+
+            centerX = radius * Math.cos(u);
+            centerY = radius * Math.sin(u);
+
+            x = (radius + tube * Math.cos(v)) * Math.cos(u);
+            y = (radius + tube * Math.cos(v)) * Math.sin(u);
+            z = tube * Math.sin(v);
+
+            positions.push(x + centerX);
+            positions.push(y + centerY);
+            positions.push(z + centerZ);
+
+            uvs.push(1 - (i / radialSegments));
+            uvs.push((j / tubeSegments));
+
+            vec = math.normalizeVec3(math.subVec3([x, y, z], [centerX, centerY, centerZ], []), []);
+
+            normals.push(vec[0]);
+            normals.push(vec[1]);
+            normals.push(vec[2]);
+        }
+    }
+
+    let a;
+    let b;
+    let c;
+    let d;
+
+    for (j = 1; j <= tubeSegments; j++) {
+        for (i = 1; i <= radialSegments; i++) {
+
+            a = (radialSegments + 1) * j + i - 1;
+            b = (radialSegments + 1) * (j - 1) + i - 1;
+            c = (radialSegments + 1) * (j - 1) + i;
+            d = (radialSegments + 1) * j + i;
+
+            indices.push(a);
+            indices.push(b);
+            indices.push(c);
+
+            indices.push(c);
+            indices.push(d);
+            indices.push(a);
+        }
+    }
+
+    return utils.apply(cfg, {
+        positions: positions,
+        normals: normals,
+        uv: uvs,
+        indices: indices
+    });
+}
+
+const zeroVec$1 = new Float64Array([0, 0, 1]);
+const quat = new Float64Array(4);
+
+/**
+ * Controls a {@link SectionPlane} with mouse and touch input.
+ *
+ * @private
+ */
+class Control {
+
+    /** @private */
+    constructor(plugin) {
+
+        /**
+         * ID of this Control.
+         *
+         * SectionPlaneControls are mapped by this ID in {@link SectionPlanesPlugin#sectionPlaneControls}.
+         *
+         * @property id
+         * @type {String|Number}
+         */
+        this.id = null;
+
+        this._viewer = plugin.viewer;
+
+        this._visible = false;
+        this._pos = math.vec3(); // Full-precision position of the center of the Control
+        this._origin = math.vec3();
+        this._rtcPos = math.vec3();
+
+        this._baseDir = math.vec3(); // Saves direction of clip plane when we start dragging an arrow or ring.
+        this._rootNode = null; // Root of Node graph that represents this control in the 3D scene
+        this._displayMeshes = null; // Meshes that are always visible
+        this._affordanceMeshes = null; // Meshes displayed momentarily for affordance
+
+        this._ignoreNextSectionPlaneDirUpdate = false;
+
+        this._createNodes();
+        this._bindEvents();
+    }
+
+    /**
+     * Called by SectionPlanesPlugin to assign this Control to a SectionPlane.
+     * SectionPlanesPlugin keeps SectionPlaneControls in a reuse pool.
+     * Call with a null or undefined value to disconnect the Control ffrom whatever SectionPlane it was assigned to.
+     * @private
+     */
+    _setSectionPlane(sectionPlane) {
+        if (this._sectionPlane) {
+            this._sectionPlane.off(this._onSectionPlanePos);
+            this._sectionPlane.off(this._onSectionPlaneDir);
+            this._onSectionPlanePos = null;
+            this._onSectionPlaneDir = null;
+            this._sectionPlane = null;
+        }
+        if (sectionPlane) {
+            this.id = sectionPlane.id;
+            this._setPos(sectionPlane.pos);
+            this._setDir(sectionPlane.dir);
+            this._sectionPlane = sectionPlane;
+            this._onSectionPlanePos = sectionPlane.on("pos", () => {
+                this._setPos(this._sectionPlane.pos);
+            });
+            this._onSectionPlaneDir = sectionPlane.on("dir", () => {
+                if (!this._ignoreNextSectionPlaneDirUpdate) {
+                    this._setDir(this._sectionPlane.dir);
+                } else {
+                    this._ignoreNextSectionPlaneDirUpdate = false;
+                }
+            });
+        }
+    }
+
+    /**
+     * Gets the {@link SectionPlane} controlled by this Control.
+     * @returns {SectionPlane} The SectionPlane.
+     */
+    get sectionPlane() {
+        return this._sectionPlane;
+    }
+
+    /** @private */
+    _setPos(xyz) {
+
+        this._pos.set(xyz);
+
+        worldToRTCPos(this._pos, this._origin, this._rtcPos);
+
+        this._rootNode.origin = this._origin;
+        this._rootNode.position = this._rtcPos;
+    }
+
+    /** @private */
+    _setDir(xyz) {
+        this._baseDir.set(xyz);
+        this._rootNode.quaternion = math.vec3PairToQuaternion(zeroVec$1, xyz, quat);
+    }
+
+    _setSectionPlaneDir(dir) {
+        if (this._sectionPlane) {
+            this._ignoreNextSectionPlaneDirUpdate = true;
+            this._sectionPlane.dir = dir;
+        }
+    }
+
+    /**
+     * Sets if this Control is visible.
+     *
+     * @type {Boolean}
+     */
+    setVisible(visible = true) {
+        if (this._visible === visible) {
+            return;
+        }
+        this._visible = visible;
+        var id;
+        for (id in this._displayMeshes) {
+            if (this._displayMeshes.hasOwnProperty(id)) {
+                this._displayMeshes[id].visible = visible;
+            }
+        }
+        if (!visible) {
+            for (id in this._affordanceMeshes) {
+                if (this._affordanceMeshes.hasOwnProperty(id)) {
+                    this._affordanceMeshes[id].visible = visible;
+                }
+            }
+        }
+    }
+
+    /**
+     * Gets if this Control is visible.
+     *
+     * @type {Boolean}
+     */
+    getVisible() {
+        return this._visible;
+    }
+
+    /**
+     * Sets if this Control is culled. This is called by SectionPlanesPlugin to
+     * temporarily hide the Control while a snapshot is being taken by Viewer#getSnapshot().
+     * @param culled
+     */
+    setCulled(culled) {
+        var id;
+        for (id in this._displayMeshes) {
+            if (this._displayMeshes.hasOwnProperty(id)) {
+                this._displayMeshes[id].culled = culled;
+            }
+        }
+        if (!culled) {
+            for (id in this._affordanceMeshes) {
+                if (this._affordanceMeshes.hasOwnProperty(id)) {
+                    this._affordanceMeshes[id].culled = culled;
+                }
+            }
+        }
+    }
+
+    /**
+     * Builds the Entities that represent this Control.
+     * @private
+     */
+    _createNodes() {
+
+        const NO_STATE_INHERIT = false;
+        const scene = this._viewer.scene;
+        const radius = 1.0;
+        const handleTubeRadius = 0.06;
+        const hoopRadius = radius - 0.2;
+        const tubeRadius = 0.01;
+        const arrowRadius = 0.07;
+
+        this._rootNode = new Node$1(scene, {
+            position: [0, 0, 0],
+            scale: [5, 5, 5]
+        });
+
+        const rootNode = this._rootNode;
+
+        const shapes = {// Reusable geometries
+
+            arrowHead: new ReadableGeometry(rootNode, buildCylinderGeometry({
+                radiusTop: 0.001,
+                radiusBottom: arrowRadius,
+                radialSegments: 32,
+                heightSegments: 1,
+                height: 0.2,
+                openEnded: false
+            })),
+
+            arrowHeadBig: new ReadableGeometry(rootNode, buildCylinderGeometry({
+                radiusTop: 0.001,
+                radiusBottom: 0.09,
+                radialSegments: 32,
+                heightSegments: 1,
+                height: 0.25,
+                openEnded: false
+            })),
+
+            arrowHeadHandle: new ReadableGeometry(rootNode, buildCylinderGeometry({
+                radiusTop: 0.09,
+                radiusBottom: 0.09,
+                radialSegments: 8,
+                heightSegments: 1,
+                height: 0.37,
+                openEnded: false
+            })),
+
+            curve: new ReadableGeometry(rootNode, buildTorusGeometry({
+                radius: hoopRadius,
+                tube: tubeRadius,
+                radialSegments: 64,
+                tubeSegments: 14,
+                arc: (Math.PI * 2.0) / 4.0
+            })),
+
+            curveHandle: new ReadableGeometry(rootNode, buildTorusGeometry({
+                radius: hoopRadius,
+                tube: handleTubeRadius,
+                radialSegments: 64,
+                tubeSegments: 14,
+                arc: (Math.PI * 2.0) / 4.0
+            })),
+
+            hoop: new ReadableGeometry(rootNode, buildTorusGeometry({
+                radius: hoopRadius,
+                tube: tubeRadius,
+                radialSegments: 64,
+                tubeSegments: 8,
+                arc: (Math.PI * 2.0)
+            })),
+
+            axis: new ReadableGeometry(rootNode, buildCylinderGeometry({
+                radiusTop: tubeRadius,
+                radiusBottom: tubeRadius,
+                radialSegments: 20,
+                heightSegments: 1,
+                height: radius,
+                openEnded: false
+            })),
+
+            axisHandle: new ReadableGeometry(rootNode, buildCylinderGeometry({
+                radiusTop: 0.08,
+                radiusBottom: 0.08,
+                radialSegments: 20,
+                heightSegments: 1,
+                height: radius,
+                openEnded: false
+            }))
+        };
+
+        const materials = { // Reusable materials
+
+            pickable: new PhongMaterial(rootNode, { // Invisible material for pickable handles, which define a pickable 3D area
+                diffuse: [1, 1, 0],
+                alpha: 0, // Invisible
+                alphaMode: "blend"
+            }),
+
+            red: new PhongMaterial(rootNode, {
+                diffuse: [1, 0.0, 0.0],
+                emissive: [1, 0.0, 0.0],
+                ambient: [0.0, 0.0, 0.0],
+                specular: [.6, .6, .3],
+                shininess: 80,
+                lineWidth: 2
+            }),
+
+            highlightRed: new EmphasisMaterial(rootNode, { // Emphasis for red rotation affordance hoop
+                edges: false,
+                fill: true,
+                fillColor: [1, 0, 0],
+                fillAlpha: 0.6
+            }),
+
+            green: new PhongMaterial(rootNode, {
+                diffuse: [0.0, 1, 0.0],
+                emissive: [0.0, 1, 0.0],
+                ambient: [0.0, 0.0, 0.0],
+                specular: [.6, .6, .3],
+                shininess: 80,
+                lineWidth: 2
+            }),
+
+            highlightGreen: new EmphasisMaterial(rootNode, { // Emphasis for green rotation affordance hoop
+                edges: false,
+                fill: true,
+                fillColor: [0, 1, 0],
+                fillAlpha: 0.6
+            }),
+
+            blue: new PhongMaterial(rootNode, {
+                diffuse: [0.0, 0.0, 1],
+                emissive: [0.0, 0.0, 1],
+                ambient: [0.0, 0.0, 0.0],
+                specular: [.6, .6, .3],
+                shininess: 80,
+                lineWidth: 2
+            }),
+
+            highlightBlue: new EmphasisMaterial(rootNode, { // Emphasis for blue rotation affordance hoop
+                edges: false,
+                fill: true,
+                fillColor: [0, 0, 1],
+                fillAlpha: 0.2
+            }),
+
+            center: new PhongMaterial(rootNode, {
+                diffuse: [0.0, 0.0, 0.0],
+                emissive: [0, 0, 0],
+                ambient: [0.0, 0.0, 0.0],
+                specular: [.6, .6, .3],
+                shininess: 80
+            }),
+
+            highlightBall: new EmphasisMaterial(rootNode, {
+                edges: false,
+                fill: true,
+                fillColor: [0.5, 0.5, 0.5],
+                fillAlpha: 0.5,
+                vertices: false
+            }),
+
+            highlightPlane: new EmphasisMaterial(rootNode, {
+                edges: true,
+                edgeWidth: 3,
+                fill: false,
+                fillColor: [0.5, 0.5, .5],
+                fillAlpha: 0.5,
+                vertices: false
+            })
+        };
+
+        this._displayMeshes = {
+
+            plane: rootNode.addChild(new Mesh(rootNode, {
+                geometry: new ReadableGeometry(rootNode, {
+                    primitive: "triangles",
+                    positions: [
+                        0.5, 0.5, 0.0, 0.5, -0.5, 0.0, // 0
+                        -0.5, -0.5, 0.0, -0.5, 0.5, 0.0, // 1
+                        0.5, 0.5, -0.0, 0.5, -0.5, -0.0, // 2
+                        -0.5, -0.5, -0.0, -0.5, 0.5, -0.0 // 3
+                    ],
+                    indices: [0, 1, 2, 2, 3, 0]
+                }),
+                material: new PhongMaterial(rootNode, {
+                    emissive: [0, 0.0, 0],
+                    diffuse: [0, 0, 0],
+                    backfaces: true
+                }),
+                opacity: 0.6,
+                ghosted: true,
+                ghostMaterial: new EmphasisMaterial(rootNode, {
+                    edges: false,
+                    filled: true,
+                    fillColor: [1, 1, 0],
+                    edgeColor: [0, 0, 0],
+                    fillAlpha: 0.1,
+                    backfaces: true
+                }),
+                pickable: false,
+                collidable: true,
+                clippable: false,
+                visible: false,
+                scale: [2.4, 2.4, 1]
+            }), NO_STATE_INHERIT),
+
+            planeFrame: rootNode.addChild(new Mesh(rootNode, { // Visible frame
+                geometry: new ReadableGeometry(rootNode, buildTorusGeometry({
+                    center: [0, 0, 0],
+                    radius: 1.7,
+                    tube: tubeRadius * 2,
+                    radialSegments: 4,
+                    tubeSegments: 4,
+                    arc: Math.PI * 2.0
+                })),
+                material: new PhongMaterial(rootNode, {
+                    emissive: [0, 0, 0],
+                    diffuse: [0, 0, 0],
+                    specular: [0, 0, 0],
+                    shininess: 0
+                }),
+                //highlighted: true,
+                highlightMaterial: new EmphasisMaterial(rootNode, {
+                    edges: false,
+                    edgeColor: [0.0, 0.0, 0.0],
+                    filled: true,
+                    fillColor: [0.8, 0.8, 0.8],
+                    fillAlpha: 1.0
+                }),
+                pickable: false,
+                collidable: false,
+                clippable: false,
+                visible: false,
+                scale: [1, 1, .1],
+                rotation: [0, 0, 45]
+            }), NO_STATE_INHERIT),
+
+            //----------------------------------------------------------------------------------------------------------
+            //
+            //----------------------------------------------------------------------------------------------------------
+
+            xCurve: rootNode.addChild(new Mesh(rootNode, { // Red hoop about Y-axis
+                geometry: shapes.curve,
+                material: materials.red,
+                matrix: (function () {
+                    const rotate2 = math.rotationMat4v(90 * math.DEGTORAD, [0, 1, 0], math.identityMat4());
+                    const rotate1 = math.rotationMat4v(270 * math.DEGTORAD, [1, 0, 0], math.identityMat4());
+                    return math.mulMat4(rotate1, rotate2, math.identityMat4());
+                })(),
+                pickable: false,
+                collidable: true,
+                clippable: false,
+                backfaces: true,
+                visible: false
+            }), NO_STATE_INHERIT),
+
+            xCurveHandle: rootNode.addChild(new Mesh(rootNode, { // Red hoop about Y-axis
+                geometry: shapes.curveHandle,
+                material: materials.pickable,
+                matrix: (function () {
+                    const rotate2 = math.rotationMat4v(90 * math.DEGTORAD, [0, 1, 0], math.identityMat4());
+                    const rotate1 = math.rotationMat4v(270 * math.DEGTORAD, [1, 0, 0], math.identityMat4());
+                    return math.mulMat4(rotate1, rotate2, math.identityMat4());
+                })(),
+                pickable: true,
+                collidable: true,
+                clippable: false,
+                backfaces: true,
+                visible: false
+            }), NO_STATE_INHERIT),
+
+            xCurveArrow1: rootNode.addChild(new Mesh(rootNode, {
+                geometry: shapes.arrowHead,
+                material: materials.red,
+                matrix: (function () {
+                    const translate = math.translateMat4c(0., -0.07, -0.8, math.identityMat4());
+                    const scale = math.scaleMat4v([0.6, 0.6, 0.6], math.identityMat4());
+                    const rotate = math.rotationMat4v(0 * math.DEGTORAD, [0, 0, 1], math.identityMat4());
+                    return math.mulMat4(math.mulMat4(translate, scale, math.identityMat4()), rotate, math.identityMat4());
+                })(),
+                pickable: true,
+                collidable: true,
+                clippable: false,
+                visible: false
+            }), NO_STATE_INHERIT),
+
+            xCurveArrow2: rootNode.addChild(new Mesh(rootNode, {
+                geometry: shapes.arrowHead,
+                material: materials.red,
+                matrix: (function () {
+                    const translate = math.translateMat4c(0.0, -0.8, -0.07, math.identityMat4());
+                    const scale = math.scaleMat4v([0.6, 0.6, 0.6], math.identityMat4());
+                    const rotate = math.rotationMat4v(90 * math.DEGTORAD, [1, 0, 0], math.identityMat4());
+                    return math.mulMat4(math.mulMat4(translate, scale, math.identityMat4()), rotate, math.identityMat4());
+                })(),
+                pickable: true,
+                collidable: true,
+                clippable: false,
+                visible: false
+            }), NO_STATE_INHERIT),
+
+            //----------------------------------------------------------------------------------------------------------
+            //
+            //----------------------------------------------------------------------------------------------------------
+
+            yCurve: rootNode.addChild(new Mesh(rootNode, {
+                geometry: shapes.curve,
+                material: materials.green,
+                rotation: [-90, 0, 0],
+                pickable: false,
+                collidable: true,
+                clippable: false,
+                backfaces: true,
+                visible: false
+            }), NO_STATE_INHERIT),
+
+            yCurveHandle: rootNode.addChild(new Mesh(rootNode, {
+                geometry: shapes.curveHandle,
+                material: materials.pickable,
+                rotation: [-90, 0, 0],
+                pickable: true,
+                collidable: true,
+                clippable: false,
+                backfaces: true,
+                visible: false
+            }), NO_STATE_INHERIT),
+
+            yCurveArrow1: rootNode.addChild(new Mesh(rootNode, {
+                geometry: shapes.arrowHead,
+                material: materials.green,
+                matrix: (function () {
+                    const translate = math.translateMat4c(0.07, 0, -0.8, math.identityMat4());
+                    const scale = math.scaleMat4v([0.6, 0.6, 0.6], math.identityMat4());
+                    const rotate = math.rotationMat4v(90 * math.DEGTORAD, [0, 0, 1], math.identityMat4());
+                    return math.mulMat4(math.mulMat4(translate, scale, math.identityMat4()), rotate, math.identityMat4());
+                })(),
+                pickable: true,
+                collidable: true,
+                clippable: false,
+                visible: false
+            }), NO_STATE_INHERIT),
+
+            yCurveArrow2: rootNode.addChild(new Mesh(rootNode, {
+                geometry: shapes.arrowHead,
+                material: materials.green,
+                matrix: (function () {
+                    const translate = math.translateMat4c(0.8, 0.0, -0.07, math.identityMat4());
+                    const scale = math.scaleMat4v([0.6, 0.6, 0.6], math.identityMat4());
+                    const rotate = math.rotationMat4v(90 * math.DEGTORAD, [1, 0, 0], math.identityMat4());
+                    return math.mulMat4(math.mulMat4(translate, scale, math.identityMat4()), rotate, math.identityMat4());
+                })(),
+                pickable: true,
+                collidable: true,
+                clippable: false,
+                visible: false
+            }), NO_STATE_INHERIT),
+
+            //----------------------------------------------------------------------------------------------------------
+            //
+            //----------------------------------------------------------------------------------------------------------
+
+            zCurve: rootNode.addChild(new Mesh(rootNode, { // Blue hoop about Z-axis
+                geometry: shapes.curve,
+                material: materials.blue,
+                matrix: math.rotationMat4v(180 * math.DEGTORAD, [1, 0, 0], math.identityMat4()),
+                pickable: false,
+                collidable: true,
+                clippable: false,
+                visible: false
+            }), NO_STATE_INHERIT),
+
+            zCurveHandle: rootNode.addChild(new Mesh(rootNode, {
+                geometry: shapes.curveHandle,
+                material: materials.pickable,
+                matrix: math.rotationMat4v(180 * math.DEGTORAD, [1, 0, 0], math.identityMat4()),
+                pickable: true,
+                collidable: true,
+                clippable: false,
+                visible: false
+            }), NO_STATE_INHERIT),
+
+            zCurveCurveArrow1: rootNode.addChild(new Mesh(rootNode, {
+                geometry: shapes.arrowHead,
+                material: materials.blue,
+                matrix: (function () {
+                    const translate = math.translateMat4c(.8, -0.07, 0, math.identityMat4());
+                    const scale = math.scaleMat4v([0.6, 0.6, 0.6], math.identityMat4());
+                    return math.mulMat4(translate, scale, math.identityMat4());
+                })(),
+                pickable: true,
+                collidable: true,
+                clippable: false,
+                visible: false
+            }), NO_STATE_INHERIT),
+
+            zCurveArrow2: rootNode.addChild(new Mesh(rootNode, {
+                geometry: shapes.arrowHead,
+                material: materials.blue,
+                matrix: (function () {
+                    const translate = math.translateMat4c(.05, -0.8, 0, math.identityMat4());
+                    const scale = math.scaleMat4v([0.6, 0.6, 0.6], math.identityMat4());
+                    const rotate = math.rotationMat4v(90 * math.DEGTORAD, [0, 0, 1], math.identityMat4());
+                    return math.mulMat4(math.mulMat4(translate, scale, math.identityMat4()), rotate, math.identityMat4());
+                })(),
+                pickable: true,
+                collidable: true,
+                clippable: false,
+                visible: false
+            }), NO_STATE_INHERIT),
+
+            //----------------------------------------------------------------------------------------------------------
+            //
+            //----------------------------------------------------------------------------------------------------------
+
+            center: rootNode.addChild(new Mesh(rootNode, {
+                geometry: new ReadableGeometry(rootNode, buildSphereGeometry({
+                    radius: 0.05
+                })),
+                material: materials.center,
+                pickable: false,
+                collidable: true,
+                clippable: false,
+                visible: false
+            }), NO_STATE_INHERIT),
+
+            //----------------------------------------------------------------------------------------------------------
+            //
+            //----------------------------------------------------------------------------------------------------------
+
+            xAxisArrow: rootNode.addChild(new Mesh(rootNode, {
+                geometry: shapes.arrowHead,
+                material: materials.red,
+                matrix: (function () {
+                    const translate = math.translateMat4c(0, radius + .1, 0, math.identityMat4());
+                    const rotate = math.rotationMat4v(-90 * math.DEGTORAD, [0, 0, 1], math.identityMat4());
+                    return math.mulMat4(rotate, translate, math.identityMat4());
+                })(),
+                pickable: false,
+                collidable: true,
+                clippable: false,
+                visible: false
+            }), NO_STATE_INHERIT),
+
+            xAxisArrowHandle: rootNode.addChild(new Mesh(rootNode, {
+                geometry: shapes.arrowHeadHandle,
+                material: materials.pickable,
+                matrix: (function () {
+                    const translate = math.translateMat4c(0, radius + .1, 0, math.identityMat4());
+                    const rotate = math.rotationMat4v(-90 * math.DEGTORAD, [0, 0, 1], math.identityMat4());
+                    return math.mulMat4(rotate, translate, math.identityMat4());
+                })(),
+                pickable: true,
+                collidable: true,
+                clippable: false,
+                visible: false
+            }), NO_STATE_INHERIT),
+
+            xAxis: rootNode.addChild(new Mesh(rootNode, {
+                geometry: shapes.axis,
+                material: materials.red,
+                matrix: (function () {
+                    const translate = math.translateMat4c(0, radius / 2, 0, math.identityMat4());
+                    const rotate = math.rotationMat4v(-90 * math.DEGTORAD, [0, 0, 1], math.identityMat4());
+                    return math.mulMat4(rotate, translate, math.identityMat4());
+                })(),
+                pickable: false,
+                collidable: true,
+                clippable: false,
+                visible: false
+            }), NO_STATE_INHERIT),
+
+            xAxisHandle: rootNode.addChild(new Mesh(rootNode, {
+                geometry: shapes.axisHandle,
+                material: materials.pickable,
+                matrix: (function () {
+                    const translate = math.translateMat4c(0, radius / 2, 0, math.identityMat4());
+                    const rotate = math.rotationMat4v(-90 * math.DEGTORAD, [0, 0, 1], math.identityMat4());
+                    return math.mulMat4(rotate, translate, math.identityMat4());
+                })(),
+                pickable: true,
+                collidable: true,
+                clippable: false,
+                visible: false
+            }), NO_STATE_INHERIT),
+
+            //----------------------------------------------------------------------------------------------------------
+            //
+            //----------------------------------------------------------------------------------------------------------
+
+            yAxisArrow: rootNode.addChild(new Mesh(rootNode, {
+                geometry: shapes.arrowHead,
+                material: materials.green,
+                matrix: (function () {
+                    const translate = math.translateMat4c(0, radius + .1, 0, math.identityMat4());
+                    const rotate = math.rotationMat4v(180 * math.DEGTORAD, [1, 0, 0], math.identityMat4());
+                    return math.mulMat4(rotate, translate, math.identityMat4());
+                })(),
+                pickable: false,
+                collidable: true,
+                clippable: false,
+                visible: false
+            }), NO_STATE_INHERIT),
+
+            yAxisArrowHandle: rootNode.addChild(new Mesh(rootNode, {
+                geometry: shapes.arrowHeadHandle,
+                material: materials.pickable,
+                matrix: (function () {
+                    const translate = math.translateMat4c(0, radius + .1, 0, math.identityMat4());
+                    const rotate = math.rotationMat4v(180 * math.DEGTORAD, [1, 0, 0], math.identityMat4());
+                    return math.mulMat4(rotate, translate, math.identityMat4());
+                })(),
+                pickable: true,
+                collidable: true,
+                clippable: false,
+                visible: false,
+                opacity: 0.2
+            }), NO_STATE_INHERIT),
+
+            yShaft: rootNode.addChild(new Mesh(rootNode, {
+                geometry: shapes.axis,
+                material: materials.green,
+                position: [0, -radius / 2, 0],
+                pickable: false,
+                collidable: true,
+                clippable: false,
+                visible: false
+            }), NO_STATE_INHERIT),
+
+            yShaftHandle: rootNode.addChild(new Mesh(rootNode, {
+                geometry: shapes.axisHandle,
+                material: materials.pickable,
+                position: [0, -radius / 2, 0],
+                pickable: true,
+                collidable: true,
+                clippable: false,
+                visible: false
+            }), NO_STATE_INHERIT),
+
+            //----------------------------------------------------------------------------------------------------------
+            //
+            //----------------------------------------------------------------------------------------------------------
+
+            zAxisArrow: rootNode.addChild(new Mesh(rootNode, {
+                geometry: shapes.arrowHead,
+                material: materials.blue,
+                matrix: (function () {
+                    const translate = math.translateMat4c(0, radius + .1, 0, math.identityMat4());
+                    const rotate = math.rotationMat4v(-90 * math.DEGTORAD, [0.8, 0, 0], math.identityMat4());
+                    return math.mulMat4(rotate, translate, math.identityMat4());
+                })(),
+                pickable: false,
+                collidable: true,
+                clippable: false,
+                visible: false
+            }), NO_STATE_INHERIT),
+
+            zAxisArrowHandle: rootNode.addChild(new Mesh(rootNode, {
+                geometry: shapes.arrowHeadHandle,
+                material: materials.pickable,
+                matrix: (function () {
+                    const translate = math.translateMat4c(0, radius + .1, 0, math.identityMat4());
+                    const rotate = math.rotationMat4v(-90 * math.DEGTORAD, [0.8, 0, 0], math.identityMat4());
+                    return math.mulMat4(rotate, translate, math.identityMat4());
+                })(),
+                pickable: true,
+                collidable: true,
+                clippable: false,
+                visible: false
+            }), NO_STATE_INHERIT),
+
+
+            zShaft: rootNode.addChild(new Mesh(rootNode, {
+                geometry: shapes.axis,
+                material: materials.blue,
+                matrix: (function () {
+                    const translate = math.translateMat4c(0, radius / 2, 0, math.identityMat4());
+                    const rotate = math.rotationMat4v(-90 * math.DEGTORAD, [1, 0, 0], math.identityMat4());
+                    return math.mulMat4(rotate, translate, math.identityMat4());
+                })(),
+                clippable: false,
+                pickable: false,
+                collidable: true,
+                visible: false
+            }), NO_STATE_INHERIT),
+
+            zAxisHandle: rootNode.addChild(new Mesh(rootNode, {
+                geometry: shapes.axisHandle,
+                material: materials.pickable,
+                matrix: (function () {
+                    const translate = math.translateMat4c(0, radius / 2, 0, math.identityMat4());
+                    const rotate = math.rotationMat4v(-90 * math.DEGTORAD, [1, 0, 0], math.identityMat4());
+                    return math.mulMat4(rotate, translate, math.identityMat4());
+                })(),
+                clippable: false,
+                pickable: true,
+                collidable: true,
+                visible: false
+            }), NO_STATE_INHERIT)
+        };
+
+        this._affordanceMeshes = {
+
+            planeFrame: rootNode.addChild(new Mesh(rootNode, {
+                geometry: new ReadableGeometry(rootNode, buildTorusGeometry({
+                    center: [0, 0, 0],
+                    radius: 2,
+                    tube: tubeRadius,
+                    radialSegments: 4,
+                    tubeSegments: 4,
+                    arc: Math.PI * 2.0
+                })),
+                material: new PhongMaterial(rootNode, {
+                    ambient: [1, 1, 1],
+                    diffuse: [0, 0, 0],
+                    emissive: [1, 1, 0]
+                }),
+                highlighted: true,
+                highlightMaterial: new EmphasisMaterial(rootNode, {
+                    edges: false,
+                    filled: true,
+                    fillColor: [1, 1, 0],
+                    fillAlpha: 1.0
+                }),
+                pickable: false,
+                collidable: false,
+                clippable: false,
+                visible: false,
+                scale: [1, 1, 1],
+                rotation: [0, 0, 45]
+            }), NO_STATE_INHERIT),
+
+            xHoop: rootNode.addChild(new Mesh(rootNode, { // Full
+                geometry: shapes.hoop,
+                material: materials.red,
+                highlighted: true,
+                highlightMaterial: materials.highlightRed,
+                matrix: (function () {
+                    const rotate2 = math.rotationMat4v(90 * math.DEGTORAD, [0, 1, 0], math.identityMat4());
+                    const rotate1 = math.rotationMat4v(270 * math.DEGTORAD, [1, 0, 0], math.identityMat4());
+                    return math.mulMat4(rotate1, rotate2, math.identityMat4());
+                })(),
+                pickable: false,
+                collidable: true,
+                clippable: false,
+                visible: false
+            }), NO_STATE_INHERIT),
+
+            yHoop: rootNode.addChild(new Mesh(rootNode, {
+                geometry: shapes.hoop,
+                material: materials.green,
+                highlighted: true,
+                highlightMaterial: materials.highlightGreen,
+                rotation: [-90, 0, 0],
+                pickable: false,
+                collidable: true,
+                clippable: false,
+                visible: false
+            }), NO_STATE_INHERIT),
+
+            zHoop: rootNode.addChild(new Mesh(rootNode, { // Blue hoop about Z-axis
+                geometry: shapes.hoop,
+                material: materials.blue,
+                highlighted: true,
+                highlightMaterial: materials.highlightBlue,
+                matrix: math.rotationMat4v(180 * math.DEGTORAD, [1, 0, 0], math.identityMat4()),
+                pickable: false,
+                collidable: true,
+                clippable: false,
+                backfaces: true,
+                visible: false
+            }), NO_STATE_INHERIT),
+
+            xAxisArrow: rootNode.addChild(new Mesh(rootNode, {
+                geometry: shapes.arrowHeadBig,
+                material: materials.red,
+                matrix: (function () {
+                    const translate = math.translateMat4c(0, radius + .1, 0, math.identityMat4());
+                    const rotate = math.rotationMat4v(-90 * math.DEGTORAD, [0, 0, 1], math.identityMat4());
+                    return math.mulMat4(rotate, translate, math.identityMat4());
+                })(),
+                pickable: false,
+                collidable: true,
+                clippable: false,
+                visible: false
+            }), NO_STATE_INHERIT),
+
+            yAxisArrow: rootNode.addChild(new Mesh(rootNode, {
+                geometry: shapes.arrowHeadBig,
+                material: materials.green,
+                matrix: (function () {
+                    const translate = math.translateMat4c(0, radius + .1, 0, math.identityMat4());
+                    const rotate = math.rotationMat4v(180 * math.DEGTORAD, [1, 0, 0], math.identityMat4());
+                    return math.mulMat4(rotate, translate, math.identityMat4());
+                })(),
+                pickable: false,
+                collidable: true,
+                clippable: false,
+                visible: false
+            }), NO_STATE_INHERIT),
+
+            zAxisArrow: rootNode.addChild(new Mesh(rootNode, {
+                geometry: shapes.arrowHeadBig,
+                material: materials.blue,
+                matrix: (function () {
+                    const translate = math.translateMat4c(0, radius + .1, 0, math.identityMat4());
+                    const rotate = math.rotationMat4v(-90 * math.DEGTORAD, [0.8, 0, 0], math.identityMat4());
+                    return math.mulMat4(rotate, translate, math.identityMat4());
+                })(),
+                pickable: false,
+                collidable: true,
+                clippable: false,
+                visible: false
+            }), NO_STATE_INHERIT)
+        };
+    }
+
+    _bindEvents() {
+
+        const self = this;
+
+        var grabbed = false;
+
+        const DRAG_ACTIONS = {
+            none: -1,
+            xTranslate: 0,
+            yTranslate: 1,
+            zTranslate: 2,
+            xRotate: 3,
+            yRotate: 4,
+            zRotate: 5
+        };
+
+        const rootNode = this._rootNode;
+
+        var nextDragAction = null; // As we hover grabbed an arrow or hoop, self is the action we would do if we then dragged it.
+        var dragAction = null; // Action we're doing while we drag an arrow or hoop.
+        const lastCanvasPos = math.vec2();
+
+        const xBaseAxis = math.vec3([1, 0, 0]);
+        const yBaseAxis = math.vec3([0, 1, 0]);
+        const zBaseAxis = math.vec3([0, 0, 1]);
+
+        const canvas = this._viewer.scene.canvas.canvas;
+        const camera = this._viewer.camera;
+        const scene = this._viewer.scene;
+
+        { // Keep gizmo screen size constant
+
+            const tempVec3a = math.vec3([0, 0, 0]);
+            let lastDist = -1;
+
+            this._onCameraViewMatrix = scene.camera.on("viewMatrix", () => {
+            });
+
+            this._onCameraProjMatrix = scene.camera.on("projMatrix", () => {
+            });
+
+            this._onSceneTick = scene.on("tick", () => {
+
+                const dist = Math.abs(math.lenVec3(math.subVec3(scene.camera.eye, this._pos, tempVec3a)));
+
+                if (dist !== lastDist) {
+                    if (camera.projection === "perspective") {
+                        const worldSize = (Math.tan(camera.perspective.fov * math.DEGTORAD)) * dist;
+                        const size = 0.07 * worldSize;
+                        rootNode.scale = [size, size, size];
+                        lastDist = dist;
+                    }
+                }
+
+                if (camera.projection === "ortho") {
+                    const worldSize = camera.ortho.scale / 10;
+                    const size = worldSize;
+                    rootNode.scale = [size, size, size];
+                    lastDist = dist;
+                }
+            });
+        }
+
+        const getClickCoordsWithinElement = (function () {
+            const canvasPos = new Float64Array(2);
+            return function (event) {
+                if (!event) {
+                    event = window.event;
+                    canvasPos[0] = event.x;
+                    canvasPos[1] = event.y;
+                } else {
+                    var element = event.target;
+                    var totalOffsetLeft = 0;
+                    var totalOffsetTop = 0;
+
+                    while (element.offsetParent) {
+                        totalOffsetLeft += element.offsetLeft;
+                        totalOffsetTop += element.offsetTop;
+                        element = element.offsetParent;
+                    }
+                    canvasPos[0] = event.pageX - totalOffsetLeft;
+                    canvasPos[1] = event.pageY - totalOffsetTop;
+                }
+                return canvasPos;
+            };
+        })();
+
+        const localToWorldVec = (function () {
+            const mat = math.mat4();
+            return function (localVec, worldVec) {
+                math.quaternionToMat4(self._rootNode.quaternion, mat);
+                math.transformVec3(mat, localVec, worldVec);
+                math.normalizeVec3(worldVec);
+                return worldVec;
+            };
+        })();
+
+        var getTranslationPlane = (function () {
+            const planeNormal = math.vec3();
+            return function (worldAxis) {
+                const absX = Math.abs(worldAxis[0]);
+                if (absX > Math.abs(worldAxis[1]) && absX > Math.abs(worldAxis[2])) {
+                    math.cross3Vec3(worldAxis, [0, 1, 0], planeNormal);
+                } else {
+                    math.cross3Vec3(worldAxis, [1, 0, 0], planeNormal);
+                }
+                math.cross3Vec3(planeNormal, worldAxis, planeNormal);
+                math.normalizeVec3(planeNormal);
+                return planeNormal;
+            }
+        })();
+
+        const dragTranslateSectionPlane = (function () {
+            const p1 = math.vec3();
+            const p2 = math.vec3();
+            const worldAxis = math.vec4();
+            return function (baseAxis, fromMouse, toMouse) {
+                localToWorldVec(baseAxis, worldAxis);
+                const planeNormal = getTranslationPlane(worldAxis, fromMouse, toMouse);
+                getPointerPlaneIntersect(fromMouse, planeNormal, p1);
+                getPointerPlaneIntersect(toMouse, planeNormal, p2);
+                math.subVec3(p2, p1);
+                const dot = math.dotVec3(p2, worldAxis);
+                self._pos[0] += worldAxis[0] * dot;
+                self._pos[1] += worldAxis[1] * dot;
+                self._pos[2] += worldAxis[2] * dot;
+                self._rootNode.position = self._pos;
+                if (self._sectionPlane) {
+                    self._sectionPlane.pos = self._pos;
+                }
+            }
+        })();
+
+        var dragRotateSectionPlane = (function () {
+            const p1 = math.vec4();
+            const p2 = math.vec4();
+            const c = math.vec4();
+            const worldAxis = math.vec4();
+            return function (baseAxis, fromMouse, toMouse) {
+                localToWorldVec(baseAxis, worldAxis);
+                const hasData = getPointerPlaneIntersect(fromMouse, worldAxis, p1) && getPointerPlaneIntersect(toMouse, worldAxis, p2);
+                if (!hasData) { // Find intersections with view plane and project down to origin
+                    const planeNormal = getTranslationPlane(worldAxis, fromMouse, toMouse);
+                    getPointerPlaneIntersect(fromMouse, planeNormal, p1, 1); // Ensure plane moves closer to camera so angles become workable
+                    getPointerPlaneIntersect(toMouse, planeNormal, p2, 1);
+                    var dot = math.dotVec3(p1, worldAxis);
+                    p1[0] -= dot * worldAxis[0];
+                    p1[1] -= dot * worldAxis[1];
+                    p1[2] -= dot * worldAxis[2];
+                    dot = math.dotVec3(p2, worldAxis);
+                    p2[0] -= dot * worldAxis[0];
+                    p2[1] -= dot * worldAxis[1];
+                    p2[2] -= dot * worldAxis[2];
+                }
+                math.normalizeVec3(p1);
+                math.normalizeVec3(p2);
+                dot = math.dotVec3(p1, p2);
+                dot = math.clamp(dot, -1.0, 1.0); // Rounding errors cause dot to exceed allowed range
+                var incDegrees = Math.acos(dot) * math.RADTODEG;
+                math.cross3Vec3(p1, p2, c);
+                if (math.dotVec3(c, worldAxis) < 0.0) {
+                    incDegrees = -incDegrees;
+                }
+                self._rootNode.rotate(baseAxis, incDegrees);
+                rotateSectionPlane();
+            }
+        })();
+
+        var getPointerPlaneIntersect = (function () {
+            const dir = math.vec4([0, 0, 0, 1]);
+            const matrix = math.mat4();
+            return function (mouse, axis, dest, offset) {
+                offset = offset || 0;
+                dir[0] = mouse[0] / canvas.width * 2.0 - 1.0;
+                dir[1] = -(mouse[1] / canvas.height * 2.0 - 1.0);
+                dir[2] = 0.0;
+                dir[3] = 1.0;
+                math.mulMat4(camera.projMatrix, camera.viewMatrix, matrix); // Unproject norm device coords to view coords
+                math.inverseMat4(matrix);
+                math.transformVec4(matrix, dir, dir);
+                math.mulVec4Scalar(dir, 1.0 / dir[3]); // This is now point A on the ray in world space
+                var rayO = camera.eye; // The direction
+                math.subVec4(dir, rayO, dir);
+                const origin = self._sectionPlane.pos; // Plane origin:
+                var d = -math.dotVec3(origin, axis) - offset;
+                var dot = math.dotVec3(axis, dir);
+                if (Math.abs(dot) > 0.005) {
+                    var t = -(math.dotVec3(axis, rayO) + d) / dot;
+                    math.mulVec3Scalar(dir, t, dest);
+                    math.addVec3(dest, rayO);
+                    math.subVec3(dest, origin, dest);
+                    return true;
+                }
+                return false;
+            }
+        })();
+
+        const rotateSectionPlane = (function () {
+            const dir = math.vec3();
+            const mat = math.mat4();
+            return function () {
+                if (self.sectionPlane) {
+                    math.quaternionToMat4(rootNode.quaternion, mat);  // << ---
+                    math.transformVec3(mat, [0, 0, 1], dir);
+                    self._setSectionPlaneDir(dir);
+                }
+            };
+        })();
+
+        {
+            var down = false;
+            var lastAffordanceMesh;
+
+            this._onCameraControlHover = this._viewer.cameraControl.on("hoverEnter", (hit) => {
+                if (!this._visible) {
+                    return;
+                }
+                if (down) {
+                    return;
+                }
+                grabbed = false;
+                if (lastAffordanceMesh) {
+                    lastAffordanceMesh.visible = false;
+                }
+                var affordanceMesh;
+                const meshId = hit.entity.id;
+                switch (meshId) {
+
+                    case this._displayMeshes.xAxisArrowHandle.id:
+                        affordanceMesh = this._affordanceMeshes.xAxisArrow;
+                        nextDragAction = DRAG_ACTIONS.xTranslate;
+                        break;
+
+                    case this._displayMeshes.xAxisHandle.id:
+                        affordanceMesh = this._affordanceMeshes.xAxisArrow;
+                        nextDragAction = DRAG_ACTIONS.xTranslate;
+                        break;
+
+                    case this._displayMeshes.yAxisArrowHandle.id:
+                        affordanceMesh = this._affordanceMeshes.yAxisArrow;
+                        nextDragAction = DRAG_ACTIONS.yTranslate;
+                        break;
+
+                    case this._displayMeshes.yShaftHandle.id:
+                        affordanceMesh = this._affordanceMeshes.yAxisArrow;
+                        nextDragAction = DRAG_ACTIONS.yTranslate;
+                        break;
+
+                    case this._displayMeshes.zAxisArrowHandle.id:
+                        affordanceMesh = this._affordanceMeshes.zAxisArrow;
+                        nextDragAction = DRAG_ACTIONS.zTranslate;
+                        break;
+
+                    case this._displayMeshes.zAxisHandle.id:
+                        affordanceMesh = this._affordanceMeshes.zAxisArrow;
+                        nextDragAction = DRAG_ACTIONS.zTranslate;
+                        break;
+
+                    case this._displayMeshes.xCurveHandle.id:
+                        affordanceMesh = this._affordanceMeshes.xHoop;
+                        nextDragAction = DRAG_ACTIONS.xRotate;
+                        break;
+
+                    case this._displayMeshes.yCurveHandle.id:
+                        affordanceMesh = this._affordanceMeshes.yHoop;
+                        nextDragAction = DRAG_ACTIONS.yRotate;
+                        break;
+
+                    case this._displayMeshes.zCurveHandle.id:
+                        affordanceMesh = this._affordanceMeshes.zHoop;
+                        nextDragAction = DRAG_ACTIONS.zRotate;
+                        break;
+
+                    default:
+                        nextDragAction = DRAG_ACTIONS.none;
+                        return; // Not clicked an arrow or hoop
+                }
+                if (affordanceMesh) {
+                    affordanceMesh.visible = true;
+                }
+                lastAffordanceMesh = affordanceMesh;
+                grabbed = true;
+            });
+
+            this._onCameraControlHoverLeave = this._viewer.cameraControl.on("hoverOut", (hit) => {
+                if (!this._visible) {
+                    return;
+                }
+                if (lastAffordanceMesh) {
+                    lastAffordanceMesh.visible = false;
+                }
+                lastAffordanceMesh = null;
+                nextDragAction = DRAG_ACTIONS.none;
+            });
+
+            canvas.addEventListener("mousedown", this._canvasMouseDownListener = (e) => {
+                e.preventDefault();
+                if (!this._visible) {
+                    return;
+                }
+                if (!grabbed) {
+                    return;
+                }
+                this._viewer.cameraControl.pointerEnabled = false;
+                switch (e.which) {
+                    case 1: // Left button
+                        down = true;
+                        var canvasPos = getClickCoordsWithinElement(e);
+                        dragAction = nextDragAction;
+                        lastCanvasPos[0] = canvasPos[0];
+                        lastCanvasPos[1] = canvasPos[1];
+                        break;
+                }
+            });
+
+            canvas.addEventListener("mousemove", this._canvasMouseMoveListener = (e) => {
+                if (!this._visible) {
+                    return;
+                }
+                if (!down) {
+                    return;
+                }
+                var canvasPos = getClickCoordsWithinElement(e);
+                const x = canvasPos[0];
+                const y = canvasPos[1];
+
+                switch (dragAction) {
+                    case DRAG_ACTIONS.xTranslate:
+                        dragTranslateSectionPlane(xBaseAxis, lastCanvasPos, canvasPos);
+                        break;
+                    case DRAG_ACTIONS.yTranslate:
+                        dragTranslateSectionPlane(yBaseAxis, lastCanvasPos, canvasPos);
+                        break;
+                    case DRAG_ACTIONS.zTranslate:
+                        dragTranslateSectionPlane(zBaseAxis, lastCanvasPos, canvasPos);
+                        break;
+                    case DRAG_ACTIONS.xRotate:
+                        dragRotateSectionPlane(xBaseAxis, lastCanvasPos, canvasPos);
+                        break;
+                    case DRAG_ACTIONS.yRotate:
+                        dragRotateSectionPlane(yBaseAxis, lastCanvasPos, canvasPos);
+                        break;
+                    case DRAG_ACTIONS.zRotate:
+                        dragRotateSectionPlane(zBaseAxis, lastCanvasPos, canvasPos);
+                        break;
+                }
+
+                lastCanvasPos[0] = x;
+                lastCanvasPos[1] = y;
+            });
+
+            canvas.addEventListener("mouseup", this._canvasMouseUpListener = (e) => {
+                if (!this._visible) {
+                    return;
+                }
+                this._viewer.cameraControl.pointerEnabled = true;
+                if (!down) {
+                    return;
+                }
+                switch (e.which) {
+                                    }
+                down = false;
+                grabbed = false;
+            });
+
+            canvas.addEventListener("wheel", this._canvasWheelListener = (e) => {
+                if (!this._visible) {
+                    return;
+                }
+                var delta = Math.max(-1, Math.min(1, -e.deltaY * 40));
+                if (delta === 0) {
+                    return;
+                }
+            });
+        }
+    }
+
+    _destroy() {
+        this._unbindEvents();
+        this._destroyNodes();
+    }
+
+    _unbindEvents() {
+
+        const viewer = this._viewer;
+        const scene = viewer.scene;
+        const canvas = scene.canvas.canvas;
+        const camera = viewer.camera;
+        const cameraControl = viewer.cameraControl;
+
+        scene.off(this._onSceneTick);
+
+        canvas.removeEventListener("mousedown", this._canvasMouseDownListener);
+        canvas.removeEventListener("mousemove", this._canvasMouseMoveListener);
+        canvas.removeEventListener("mouseup", this._canvasMouseUpListener);
+        canvas.removeEventListener("wheel", this._canvasWheelListener);
+
+        camera.off(this._onCameraViewMatrix);
+        camera.off(this._onCameraProjMatrix);
+
+        cameraControl.off(this._onCameraControlHover);
+        cameraControl.off(this._onCameraControlHoverLeave);
+    }
+
+    _destroyNodes() {
+        this._setSectionPlane(null);
+        this._rootNode.destroy();
+        this._displayMeshes = {};
+        this._affordanceMeshes = {};
+    }
+}
+
+/**
+ * Renders a 3D plane within an {@link Overview} to indicate its {@link SectionPlane}'s current position and orientation.
+ *
+ * @private
+ */
+class Plane {
+
+    /** @private */
+    constructor(overview, overviewScene, sectionPlane) {
+
+        /**
+         * The ID of this SectionPlanesOverviewPlane.
+         *
+         * @type {String}
+         */
+        this.id = sectionPlane.id;
+
+        /**
+         * The {@link SectionPlane} represented by this SectionPlanesOverviewPlane.
+         *
+         * @type {SectionPlane}
+         */
+        this._sectionPlane = sectionPlane;
+
+        this._mesh = new Mesh(overviewScene, {
+            id: sectionPlane.id,
+            geometry: new ReadableGeometry(overviewScene, buildBoxGeometry({
+                xSize: .5,
+                ySize: .5,
+                zSize: .001
+            })),
+            material: new PhongMaterial(overviewScene, {
+                emissive: [1, 1, 1],
+                diffuse: [0, 0, 0],
+                backfaces: false
+            }),
+            edgeMaterial: new EdgeMaterial(overviewScene, {
+                edgeColor: [0.0, 0.0, 0.0],
+                edgeAlpha: 1.0,
+                edgeWidth: 1
+            }),
+            highlightMaterial: new EmphasisMaterial(overviewScene, {
+                fill: true,
+                fillColor: [0.5, 1, 0.5],
+                fillAlpha: 0.7,
+                edges: true,
+                edgeColor: [0.0, 0.0, 0.0],
+                edgeAlpha: 1.0,
+                edgeWidth: 1
+            }),
+            selectedMaterial: new EmphasisMaterial(overviewScene, {
+                fill: true,
+                fillColor: [0, 0, 1],
+                fillAlpha: 0.7,
+                edges: true,
+                edgeColor: [1.0, 0.0, 0.0],
+                edgeAlpha: 1.0,
+                edgeWidth: 1
+            }),
+            highlighted: true,
+            scale: [3, 3, 3],
+            position: [0, 0, 0],
+            rotation: [0, 0, 0],
+            opacity: 0.3,
+            edges: true
+        });
+
+
+        {
+            const vec = math.vec3([0, 0, 0]);
+            const pos2 = math.vec3();
+            const zeroVec = math.vec3([0, 0, 1]);
+            const quat = math.vec4(4);
+            const pos3 = math.vec3();
+
+            const update = () => {
+
+                const origin = this._sectionPlane.scene.center;
+
+                const negDir = [-this._sectionPlane.dir[0], -this._sectionPlane.dir[1], -this._sectionPlane.dir[2]];
+                math.subVec3(origin, this._sectionPlane.pos, vec);
+                const dist = -math.dotVec3(negDir, vec);
+
+                math.normalizeVec3(negDir);
+                math.mulVec3Scalar(negDir, dist, pos2);
+                const quaternion = math.vec3PairToQuaternion(zeroVec, this._sectionPlane.dir, quat);
+
+                pos3[0] = pos2[0] * 0.1;
+                pos3[1] = pos2[1] * 0.1;
+                pos3[2] = pos2[2] * 0.1;
+
+                this._mesh.quaternion = quaternion;
+                this._mesh.position = pos3;
+            };
+
+            this._onSectionPlanePos = this._sectionPlane.on("pos", update);
+            this._onSectionPlaneDir = this._sectionPlane.on("dir", update);
+
+            // update();
+        }
+
+        this._highlighted = false;
+        this._selected = false;
+    }
+
+    /**
+     * Sets if this SectionPlanesOverviewPlane is highlighted.
+     *
+     * @type {Boolean}
+     * @private
+     */
+    setHighlighted(highlighted) {
+        this._highlighted = !!highlighted;
+        this._mesh.highlighted = this._highlighted;
+        this._mesh.highlightMaterial.fillColor = highlighted ? [0, 0.7, 0] : [0, 0, 0];
+        // this._selectedMesh.highlighted = true;
+    }
+
+    /**
+     * Gets if this SectionPlanesOverviewPlane is highlighted.
+     *
+     * @type {Boolean}
+     * @private
+     */
+    getHighlighted() {
+        return this._highlighted;
+    }
+
+    /**
+     * Sets if this SectionPlanesOverviewPlane is selected.
+     *
+     * @type {Boolean}
+     * @private
+     */
+    setSelected(selected) {
+        this._selected = !!selected;
+        this._mesh.edgeMaterial.edgeWidth = selected ? 3 : 1;
+        this._mesh.highlightMaterial.edgeWidth = selected ? 3 : 1;
+
+    }
+
+    /**
+     * Gets if this SectionPlanesOverviewPlane is selected.
+     *
+     * @type {Boolean}
+     * @private
+     */
+    getSelected() {
+        return this._selected;
+    }
+
+    /** @private */
+    destroy() {
+        this._sectionPlane.off(this._onSectionPlanePos);
+        this._sectionPlane.off(this._onSectionPlaneDir);
+        this._mesh.destroy();
+    }
+}
+
+/**
+ * @desc An interactive 3D overview for navigating the {@link SectionPlane}s created by its {@link SectionPlanesPlugin}.
+ *
+ * * Located at {@link SectionPlanesPlugin#overview}.
+ * * Renders the overview on a separate canvas at a corner of the {@link Viewer}'s {@link Scene} {@link Canvas}.
+ * * The overview shows a 3D plane object for each {@link SectionPlane} in the {@link Scene}.
+ * * Click a plane object in the overview to toggle the visibility of a 3D gizmo to edit the position and orientation of its {@link SectionPlane}.
+ *
+ * @private
+ */
+class Overview {
+
+    /**
+     * @private
+     */
+    constructor(plugin, cfg) {
+
+        if (!cfg.onHoverEnterPlane || !cfg.onHoverLeavePlane || !cfg.onClickedNothing || !cfg.onClickedPlane) {
+            throw "Missing config(s): onHoverEnterPlane, onHoverLeavePlane, onClickedNothing || onClickedPlane";
+        }
+
+        /**
+         * The {@link SectionPlanesPlugin} that owns this SectionPlanesOverview.
+         *
+         * @type {SectionPlanesPlugin}
+         */
+        this.plugin = plugin;
+
+        this._viewer = plugin.viewer;
+
+        this._onHoverEnterPlane = cfg.onHoverEnterPlane;
+        this._onHoverLeavePlane = cfg.onHoverLeavePlane;
+        this._onClickedNothing = cfg.onClickedNothing;
+        this._onClickedPlane = cfg.onClickedPlane;
+        this._visible = true;
+
+        this._planes = {};
+
+        //--------------------------------------------------------------------------------------------------------------
+        // Init canvas
+        //--------------------------------------------------------------------------------------------------------------
+
+        this._canvas = cfg.overviewCanvas;
+
+        //--------------------------------------------------------------------------------------------------------------
+        // Init scene
+        //--------------------------------------------------------------------------------------------------------------
+
+        this._scene = new Scene(this._viewer, {
+            canvasId: this._canvas.id,
+            transparent: true
+        });
+        this._scene.clearLights();
+        new DirLight(this._scene, {
+            dir: [0.4, -0.4, 0.8],
+            color: [0.8, 1.0, 1.0],
+            intensity: 1.0,
+            space: "view"
+        });
+        new DirLight(this._scene, {
+            dir: [-0.8, -0.3, -0.4],
+            color: [0.8, 0.8, 0.8],
+            intensity: 1.0,
+            space: "view"
+        });
+        new DirLight(this._scene, {
+            dir: [0.8, -0.6, -0.8],
+            color: [1.0, 1.0, 1.0],
+            intensity: 1.0,
+            space: "view"
+        });
+
+        this._scene.camera;
+        this._scene.camera.perspective.fov = 70;
+
+        this._zUp = false;
+
+        //--------------------------------------------------------------------------------------------------------------
+        // Synchronize overview scene camera with viewer camera
+        //--------------------------------------------------------------------------------------------------------------
+
+        {
+            const camera = this._scene.camera;
+            const matrix = math.rotationMat4c(-90 * math.DEGTORAD, 1, 0, 0);
+            const eyeLookVec = math.vec3();
+            const eyeLookVecOverview = math.vec3();
+            const upOverview = math.vec3();
+
+            this._synchCamera = () => {
+                const eye = this._viewer.camera.eye;
+                const look = this._viewer.camera.look;
+                const up = this._viewer.camera.up;
+                math.mulVec3Scalar(math.normalizeVec3(math.subVec3(eye, look, eyeLookVec)), 7);
+                if (this._zUp) { // +Z up
+                    math.transformVec3(matrix, eyeLookVec, eyeLookVecOverview);
+                    math.transformVec3(matrix, up, upOverview);
+                    camera.look = [0, 0, 0];
+                    camera.eye = math.transformVec3(matrix, eyeLookVec, eyeLookVecOverview);
+                    camera.up = math.transformPoint3(matrix, up, upOverview);
+                } else { // +Y up
+                    camera.look = [0, 0, 0];
+                    camera.eye = eyeLookVec;
+                    camera.up = up;
+                }
+            };
+        }
+
+        this._onViewerCameraMatrix = this._viewer.camera.on("matrix", this._synchCamera);
+
+        this._onViewerCameraWorldAxis = this._viewer.camera.on("worldAxis", this._synchCamera);
+
+        this._onViewerCameraFOV = this._viewer.camera.perspective.on("fov", (fov) => {
+            this._scene.camera.perspective.fov = fov;
+        });
+
+        //--------------------------------------------------------------------------------------------------------------
+        // Bind overview canvas events
+        //--------------------------------------------------------------------------------------------------------------
+
+        {
+            var hoveredEntity = null;
+
+            this._onInputMouseMove = this._scene.input.on("mousemove", (coords) => {
+                const hit = this._scene.pick({
+                    canvasPos: coords
+                });
+                if (hit) {
+                    if (!hoveredEntity || hit.entity.id !== hoveredEntity.id) {
+                        if (hoveredEntity) {
+                            const plane = this._planes[hoveredEntity.id];
+                            if (plane) {
+                                this._onHoverLeavePlane(hoveredEntity.id);
+                            }
+                        }
+                        hoveredEntity = hit.entity;
+                        const plane = this._planes[hoveredEntity.id];
+                        if (plane) {
+                            this._onHoverEnterPlane(hoveredEntity.id);
+                        }
+                    }
+                } else {
+                    if (hoveredEntity) {
+                        this._onHoverLeavePlane(hoveredEntity.id);
+                        hoveredEntity = null;
+                    }
+                }
+            });
+
+            this._scene.canvas.canvas.addEventListener("mouseup", this._onCanvasMouseUp = () => {
+                if (hoveredEntity) {
+                    const plane = this._planes[hoveredEntity.id];
+                    if (plane) {
+                        this._onClickedPlane(hoveredEntity.id);
+                    }
+                } else {
+                    this._onClickedNothing();
+                }
+            });
+
+            this._scene.canvas.canvas.addEventListener("mouseout", this._onCanvasMouseOut = () => {
+                if (hoveredEntity) {
+                    this._onHoverLeavePlane(hoveredEntity.id);
+                    hoveredEntity = null;
+                }
+            });
+        }
+
+        //--------------------------------------------------------------------------------------------------------------
+        // Configure overview
+        //--------------------------------------------------------------------------------------------------------------
+
+        this.setVisible(cfg.overviewVisible);
+    }
+
+    /** Called by SectionPlanesPlugin#createSectionPlane()
+     * @private
+     */
+    addSectionPlane(sectionPlane) {
+        this._planes[sectionPlane.id] = new Plane(this, this._scene, sectionPlane);
+    }
+
+    /**  @private
+     */
+    setPlaneHighlighted(id, highlighted) {
+        const plane = this._planes[id];
+        if (plane) {
+            plane.setHighlighted(highlighted);
+        }
+    }
+
+    /**  @private
+     */
+    setPlaneSelected(id, selected) {
+        const plane = this._planes[id];
+        if (plane) {
+            plane.setSelected(selected);
+        }
+    }
+
+    /** @private
+     */
+    removeSectionPlane(sectionPlane) {
+        const plane = this._planes[sectionPlane.id];
+        if (plane) {
+            plane.destroy();
+            delete this._planes[sectionPlane.id];
+        }
+    }
+
+    /**
+     * Sets if this SectionPlanesOverview is visible.
+     *
+     * @param {Boolean} visible Whether or not this SectionPlanesOverview is visible.
+     */
+    setVisible(visible = true) {
+        this._visible = visible;
+        this._canvas.style.visibility = visible ? "visible" : "hidden";
+    }
+
+    /**
+     * Gets if this SectionPlanesOverview is visible.
+     *
+     * @return {Boolean} True when this SectionPlanesOverview is visible.
+     */
+    getVisible() {
+        return this._visible;
+    }
+
+    /**  @private
+     */
+    destroy() {
+        this._viewer.camera.off(this._onViewerCameraMatrix);
+        this._viewer.camera.off(this._onViewerCameraWorldAxis);
+        this._viewer.camera.perspective.off(this._onViewerCameraFOV);
+
+        this._scene.input.off(this._onInputMouseMove);
+        this._scene.canvas.canvas.removeEventListener("mouseup", this._onCanvasMouseUp);
+        this._scene.canvas.canvas.removeEventListener("mouseout", this._onCanvasMouseOut);
+        this._scene.destroy();
+    }
+}
+
+const tempAABB = math.AABB3();
+const tempVec3$3 = math.vec3();
+
+/**
+ * SectionPlanesPlugin is a {@link Viewer} plugin that manages {@link SectionPlane}s.
+ *
+ * [<img src="https://user-images.githubusercontent.com/83100/57724962-406e9a00-768c-11e9-9f1f-3d178a3ec11f.gif">](https://xeokit.github.io/xeokit-sdk/examples/#gizmos_SectionPlanesPlugin)
+ *
+ * [[Run this example](https://xeokit.github.io/xeokit-sdk/examples/#gizmos_SectionPlanesPlugin)]
+ *
+ * ## Overview
+ *
+ * * Use the SectionPlanesPlugin to
+ * create and edit {@link SectionPlane}s to slice portions off your models and reveal internal structures.
+ * * As shown in the screen capture above, SectionPlanesPlugin shows an overview of all your SectionPlanes (on the right, in
+ * this example).
+ * * Click a plane in the overview to activate a 3D control with which you can interactively
+ * reposition its SectionPlane in the main canvas.
+ *
+ * ## Usage
+ *
+ * In the example below, we'll use a {@link GLTFLoaderPlugin} to load a model, and a SectionPlanesPlugin
+ * to slice it open with two {@link SectionPlane}s. We'll show the overview in the bottom right of the Viewer
+ * canvas. Finally, we'll programmatically activate the 3D editing control, so that we can use it to interactively
+ * reposition our second SectionPlane.
+ *
+ * ````JavaScript
+ * import {Viewer, GLTFLoaderPlugin, SectionPlanesPlugin} from "xeokit-sdk.es.js";
+ *
+ * // Create a Viewer and arrange its Camera
+ *
+ * const viewer = new Viewer({
+ *     canvasId: "myCanvas"
+ * });
+ *
+ * viewer.camera.eye = [-5.02, 2.22, 15.09];
+ * viewer.camera.look = [4.97, 2.79, 9.89];
+ * viewer.camera.up = [-0.05, 0.99, 0.02];
+ *
+ *
+ * // Add a GLTFLoaderPlugin
+ *
+ * const gltfLoader = new GLTFLoaderPlugin(viewer);
+ *
+ * // Add a SectionPlanesPlugin, with overview visible
+ *
+ * const sectionPlanes = new SectionPlanesPlugin(viewer, {
+ *     overviewCanvasID: "myOverviewCanvas",
+ *     overviewVisible: true
+ * });
+ *
+ * // Load a model
+ *
+ * const model = gltfLoader.load({
+ *     id: "myModel",
+ *     src: "./models/gltf/schependomlaan/scene.gltf"
+ * });
+ *
+ * // Create a couple of section planes
+ * // These will be shown in the overview
+ *
+ * sectionPlanes.createSectionPlane({
+ *     id: "mySectionPlane",
+ *     pos: [1.04, 1.95, 9.74],
+ *     dir: [1.0, 0.0, 0.0]
+ * });
+ *
+ * sectionPlanes.createSectionPlane({
+ *     id: "mySectionPlane2",
+ *     pos: [2.30, 4.46, 14.93],
+ *     dir: [0.0, -0.09, -0.79]
+ * });
+ *
+ * // Show the SectionPlanePlugin's 3D editing gizmo,
+ * // to interactively reposition one of our SectionPlanes
+ *
+ * sectionPlanes.showControl("mySectionPlane2");
+ *
+ * const mySectionPlane2 = sectionPlanes.sectionPlanes["mySectionPlane2"];
+ *
+ * // Programmatically reposition one of our SectionPlanes
+ * // This also updates its position as shown in the overview gizmo
+ *
+ * mySectionPlane2.pos = [11.0, 6.-, -12];
+ * mySectionPlane2.dir = [0.4, 0.0, 0.5];
+ * ````
+ */
+class SectionPlanesPlugin extends Plugin {
+
+    /**
+     * @constructor
+     * @param {Viewer} viewer The Viewer.
+     * @param {Object} cfg Plugin configuration.
+     * @param {String} [cfg.id="SectionPlanes"] Optional ID for this plugin, so that we can find it within {@link Viewer#plugins}.
+     * @param {String} [cfg.overviewCanvasId] ID of a canvas element to display the overview.
+     * @param {String} [cfg.overviewVisible=true] Initial visibility of the overview canvas.
+     */
+    constructor(viewer, cfg = {}) {
+
+        super("SectionPlanes", viewer);
+
+        this._freeControls = [];
+        this._sectionPlanes = viewer.scene.sectionPlanes;
+        this._controls = {};
+        this._shownControlId = null;
+
+        if (cfg.overviewCanvasId !== null && cfg.overviewCanvasId !== undefined) {
+
+            const overviewCanvas = document.getElementById(cfg.overviewCanvasId);
+
+            if (!overviewCanvas) {
+                this.warn("Can't find overview canvas: '" + cfg.overviewCanvasId + "' - will create plugin without overview");
+
+            } else {
+
+                this._overview = new Overview(this, {
+                    overviewCanvas: overviewCanvas,
+                    visible: cfg.overviewVisible,
+
+                    onHoverEnterPlane: ((id) => {
+                        this._overview.setPlaneHighlighted(id, true);
+                    }),
+
+                    onHoverLeavePlane: ((id) => {
+                        this._overview.setPlaneHighlighted(id, false);
+                    }),
+
+                    onClickedPlane: ((id) => {
+                        if (this.getShownControl() === id) {
+                            this.hideControl();
+                            return;
+                        }
+                        this.showControl(id);
+                        const sectionPlane = this.sectionPlanes[id];
+                        const sectionPlanePos = sectionPlane.pos;
+                        tempAABB.set(this.viewer.scene.aabb);
+                        math.getAABB3Center(tempAABB, tempVec3$3);
+                        tempAABB[0] += sectionPlanePos[0] - tempVec3$3[0];
+                        tempAABB[1] += sectionPlanePos[1] - tempVec3$3[1];
+                        tempAABB[2] += sectionPlanePos[2] - tempVec3$3[2];
+                        tempAABB[3] += sectionPlanePos[0] - tempVec3$3[0];
+                        tempAABB[4] += sectionPlanePos[1] - tempVec3$3[1];
+                        tempAABB[5] += sectionPlanePos[2] - tempVec3$3[2];
+                        this.viewer.cameraFlight.flyTo({
+                            aabb: tempAABB,
+                            fitFOV: 65
+                        });
+                    }),
+
+                    onClickedNothing: (() => {
+                        this.hideControl();
+                    })
+                });
+            }
+        }
+
+        this._onSceneSectionPlaneCreated = viewer.scene.on("sectionPlaneCreated", (sectionPlane) => {
+
+            // SectionPlane created, either via SectionPlanesPlugin#createSectionPlane(), or by directly
+            // instantiating a SectionPlane independently of SectionPlanesPlugin, which can be done
+            // by BCFViewpointsPlugin#loadViewpoint().
+
+            this._sectionPlaneCreated(sectionPlane);
+        });
+    }
+
+    /**
+     * Sets if the overview canvas is visible.
+     *
+     * @param {Boolean} visible Whether or not the overview canvas is visible.
+     */
+    setOverviewVisible(visible) {
+        if (this._overview) {
+            this._overview.setVisible(visible);
+        }
+    }
+
+    /**
+     * Gets if the overview canvas is visible.
+     *
+     * @return {Boolean} True when the overview canvas is visible.
+     */
+    getOverviewVisible() {
+        if (this._overview) {
+            return this._overview.getVisible();
+        }
+    }
+
+    /**
+     * Returns a map of the {@link SectionPlane}s created by this SectionPlanesPlugin.
+     *
+     * @returns {{String:SectionPlane}} A map containing the {@link SectionPlane}s, each mapped to its {@link SectionPlane#id}.
+     */
+    get sectionPlanes() {
+        return this._sectionPlanes;
+    }
+
+    /**
+     * Creates a {@link SectionPlane}.
+     *
+     * The {@link SectionPlane} will be registered by {@link SectionPlane#id} in {@link SectionPlanesPlugin#sectionPlanes}.
+     *
+     * @param {Object} params {@link SectionPlane} configuration.
+     * @param {String} [params.id] Unique ID to assign to the {@link SectionPlane}. Must be unique among all components in the {@link Viewer}'s {@link Scene}. Auto-generated when omitted.
+     * @param {Number[]} [params.pos=[0,0,0]] World-space position of the {@link SectionPlane}.
+     * @param {Number[]} [params.dir=[0,0,-1]] World-space vector indicating the orientation of the {@link SectionPlane}.
+     * @param {Boolean} [params.active=true] Whether the {@link SectionPlane} is initially active. Only clips while this is true.
+     * @returns {SectionPlane} The new {@link SectionPlane}.
+     */
+    createSectionPlane(params = {}) {
+
+        if (params.id !== undefined && params.id !== null && this.viewer.scene.components[params.id]) {
+            this.error("Viewer component with this ID already exists: " + params.id);
+            delete params.id;
+        }
+
+        // Note that SectionPlane constructor fires "sectionPlaneCreated" on the Scene,
+        // which SectionPlanesPlugin handles and calls #_sectionPlaneCreated to create gizmo and add to overview canvas.
+
+        const sectionPlane = new SectionPlane(this.viewer.scene, {
+            id: params.id,
+            pos: params.pos,
+            dir: params.dir,
+            active: true 
+        });
+        return sectionPlane;
+    }
+
+    _sectionPlaneCreated(sectionPlane) {
+        const control = (this._freeControls.length > 0) ? this._freeControls.pop() : new Control(this);
+        control._setSectionPlane(sectionPlane);
+        control.setVisible(false);
+        this._controls[sectionPlane.id] = control;
+        if (this._overview) {
+            this._overview.addSectionPlane(sectionPlane);
+        }
+        sectionPlane.once("destroyed", () => {
+            this._sectionPlaneDestroyed(sectionPlane);
+        });
+    }
+
+    /**
+     * Inverts the direction of {@link SectionPlane#dir} on every existing SectionPlane.
+     *
+     * Inverts all SectionPlanes, including those that were not created with SectionPlanesPlugin.
+     */
+    flipSectionPlanes() {
+        const sectionPlanes = this.viewer.scene.sectionPlanes;
+        for (let id in sectionPlanes) {
+            const sectionPlane = sectionPlanes[id];
+            sectionPlane.flipDir();
+        }
+    }
+
+    /**
+     * Shows the 3D editing gizmo for a {@link SectionPlane}.
+     *
+     * @param {String} id ID of the {@link SectionPlane}.
+     */
+    showControl(id) {
+        const control = this._controls[id];
+        if (!control) {
+            this.error("Control not found: " + id);
+            return;
+        }
+        this.hideControl();
+        control.setVisible(true);
+        if (this._overview) {
+            this._overview.setPlaneSelected(id, true);
+        }
+        this._shownControlId = id;
+    }
+
+    /**
+     * Gets the ID of the {@link SectionPlane} that the 3D editing gizmo is shown for.
+     *
+     * Returns ````null```` when the editing gizmo is not shown.
+     *
+     * @returns {String} ID of the the {@link SectionPlane} that the 3D editing gizmo is shown for, if shown, else ````null````.
+     */
+    getShownControl() {
+        return this._shownControlId;
+    }
+
+    /**
+     * Hides the 3D {@link SectionPlane} editing gizmo if shown.
+     */
+    hideControl() {
+        for (var id in this._controls) {
+            if (this._controls.hasOwnProperty(id)) {
+                this._controls[id].setVisible(false);
+                if (this._overview) {
+                    this._overview.setPlaneSelected(id, false);
+                }
+            }
+        }
+        this._shownControlId = null;
+    }
+
+    /**
+     * Destroys a {@link SectionPlane} created by this SectionPlanesPlugin.
+     *
+     * @param {String} id ID of the {@link SectionPlane}.
+     */
+    destroySectionPlane(id) {
+        var sectionPlane = this.viewer.scene.sectionPlanes[id];
+        if (!sectionPlane) {
+            this.error("SectionPlane not found: " + id);
+            return;
+        }
+        this._sectionPlaneDestroyed(sectionPlane);
+        sectionPlane.destroy();
+
+        if (id === this._shownControlId) {
+            this._shownControlId = null;
+        }
+    }
+
+    _sectionPlaneDestroyed(sectionPlane) {
+        if (this._overview) {
+            this._overview.removeSectionPlane(sectionPlane);
+        }
+        const control = this._controls[sectionPlane.id];
+        if (!control) {
+            return;
+        }
+        control.setVisible(false);
+        control._setSectionPlane(null);
+        delete this._controls[sectionPlane.id];
+        this._freeControls.push(control);
+    }
+
+    /**
+     * Destroys all {@link SectionPlane}s created by this SectionPlanesPlugin.
+     */
+    clear() {
+        const ids = Object.keys(this._sectionPlanes);
+        for (var i = 0, len = ids.length; i < len; i++) {
+            this.destroySectionPlane(ids[i]);
+        }
+    }
+
+    /**
+     * @private
+     */
+    send(name, value) {
+        switch (name) {
+
+            case "snapshotStarting": // Viewer#getSnapshot() about to take snapshot - hide controls
+                for (let id in this._controls) {
+                    if (this._controls.hasOwnProperty(id)) {
+                        this._controls[id].setCulled(true);
+                    }
+                }
+                break;
+
+            case "snapshotFinished": // Viewer#getSnapshot() finished taking snapshot - show controls again
+                for (let id in this._controls) {
+                    if (this._controls.hasOwnProperty(id)) {
+                        this._controls[id].setCulled(false);
+                    }
+                }
+                break;
+
+            case "clearSectionPlanes":
+                this.clear();
+                break;
+        }
+    }
+
+    /**
+     * Destroys this SectionPlanesPlugin.
+     *
+     * Also destroys each {@link SectionPlane} created by this SectionPlanesPlugin.
+     *
+     * Does not destroy the canvas the SectionPlanesPlugin was configured with.
+     */
+    destroy() {
+        this.clear();
+        if (this._overview) {
+            this._overview.destroy();
+        }
+        this._destroyFreeControls();
+        super.destroy();
+    }
+
+    _destroyFreeControls() {
+        var control = this._freeControls.pop();
+        while (control) {
+            control._destroy();
+            control = this._freeControls.pop();
+        }
+        this.viewer.scene.off(this._onSceneSectionPlaneCreated);
+    }
+}
 
 math.vec3();
 
@@ -96144,6 +100139,7 @@ if (isBim3DModel) {
     });
 
     model.on("loaded", () => {
+        viewer.cameraFlight.flyTo(model);
         canvas.style.position = "";
     });
 
@@ -96247,8 +100243,8 @@ if (isBim3DModel) {
                             wrap.appendChild(content);
                             propContainer.appendChild(wrap);
                         }
-                        if (propContainer != lastDataShown){
-                            if (lastDataShown){
+                        if (propContainer != lastDataShown) {
+                            if (lastDataShown) {
                                 lastDataShown.style.display = "none";
                             }
                             propContainer.style.display = "";
@@ -96273,4 +100269,73 @@ if (isBim3DModel) {
         }
         e.event.preventDefault();
     });
+
+    var lastEntity = null;
+    viewer.cameraControl.on("hover", (result) => {
+        const hit = viewer.scene.pick({
+            canvasPos: result.canvasPos,
+        });
+        if (hit) {
+            if (!lastEntity || hit.entity.id != lastEntity.id) {
+                if (lastEntity) {
+                    lastEntity.highlighted = false;
+                }
+                lastEntity = hit.entity;
+                hit.entity.highlighted = true;
+            }
+        }
+        else {
+            if (lastEntity) {
+                lastEntity.highlighted = false;
+                lastEntity = null;
+            }
+        }
+    });
+
+
+
+    window.onresize = () => {
+        canvas.style.height = window.innerHeight - 200 + "px";
+    };
+
+    const cameraControl = viewer.cameraControl;
+    cameraControl.navMode = "orbit";
+    cameraControl.followPointer = true;
+    const pivotElement = document.createRange().createContextualFragment("<div class='xeokit-camera-pivot-marker'></div>").firstChild;
+    document.body.appendChild(pivotElement);
+    cameraControl.pivotElement = pivotElement;
+
+    document.getElementById("model-control-fit-view").onclick = (mouseEvent) => {
+        viewer.cameraFlight.flyTo(model);
+    };
+
+    const sectionPlanes = new SectionPlanesPlugin(viewer);
+    var sectionPlane = null;
+
+    document.getElementById("model-control-slice").onclick = (mouseEvent) => {
+        if (mouseEvent.target.checked) {
+            viewer.cameraControl.on("picked", (e) => { });
+            sectionPlane.destroy();
+            sectionPlane = null;
+            mouseEvent.target.checked = false;
+        }
+        else {
+            viewer.cameraControl.on("picked", (e) => {
+                if (!sectionPlane) {
+                    const hit = viewer.scene.pick({
+                        canvasPos: e.canvasPos,
+                        pickSurface: true,
+                    });
+                    if (hit && hit.worldNormal) {
+                        sectionPlane = sectionPlanes.createSectionPlane({
+                            pos: hit.worldPos,
+                            dir: math.mulVec3Scalar(hit.worldNormal, -1),
+                        });
+                    }
+                    sectionPlanes.showControl(sectionPlane.id);
+                }
+            });
+            mouseEvent.target.checked = true;
+        }
+    };
 }

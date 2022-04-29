@@ -1,5 +1,5 @@
 /*jshint esversion: 6*/
-import { ContextMenu, NavCubePlugin, TreeViewPlugin, Viewer, XKTLoaderPlugin } from "@xeokit/xeokit-sdk";
+import { ContextMenu, math, NavCubePlugin, SectionPlanesPlugin, TreeViewPlugin, Viewer, XKTLoaderPlugin } from "@xeokit/xeokit-sdk";
 
 const isBim3DModel = document.getElementById("isBim3DModel");
 
@@ -28,6 +28,7 @@ if (isBim3DModel) {
     });
 
     model.on("loaded", () => {
+        viewer.cameraFlight.flyTo(model);
         canvas.style.position = "";
     });
 
@@ -131,8 +132,8 @@ if (isBim3DModel) {
                             wrap.appendChild(content);
                             propContainer.appendChild(wrap);
                         }
-                        if (propContainer != lastDataShown){
-                            if (lastDataShown){
+                        if (propContainer != lastDataShown) {
+                            if (lastDataShown) {
                                 lastDataShown.style.display = "none";
                             }
                             propContainer.style.display = "";
@@ -157,4 +158,73 @@ if (isBim3DModel) {
         }
         e.event.preventDefault();
     });
+
+    var lastEntity = null;
+    viewer.cameraControl.on("hover", (result) => {
+        const hit = viewer.scene.pick({
+            canvasPos: result.canvasPos,
+        });
+        if (hit) {
+            if (!lastEntity || hit.entity.id != lastEntity.id) {
+                if (lastEntity) {
+                    lastEntity.highlighted = false;
+                }
+                lastEntity = hit.entity;
+                hit.entity.highlighted = true;
+            }
+        }
+        else {
+            if (lastEntity) {
+                lastEntity.highlighted = false;
+                lastEntity = null;
+            }
+        }
+    });
+
+
+
+    window.onresize = () => {
+        canvas.style.height = window.innerHeight - 200 + "px";
+    };
+
+    const cameraControl = viewer.cameraControl;
+    cameraControl.navMode = "orbit";
+    cameraControl.followPointer = true;
+    const pivotElement = document.createRange().createContextualFragment("<div class='xeokit-camera-pivot-marker'></div>").firstChild;
+    document.body.appendChild(pivotElement);
+    cameraControl.pivotElement = pivotElement;
+
+    document.getElementById("model-control-fit-view").onclick = (mouseEvent) => {
+        viewer.cameraFlight.flyTo(model);
+    };
+
+    const sectionPlanes = new SectionPlanesPlugin(viewer);
+    var sectionPlane = null;
+
+    document.getElementById("model-control-slice").onclick = (mouseEvent) => {
+        if (mouseEvent.target.checked) {
+            viewer.cameraControl.on("picked", (e) => { });
+            sectionPlane.destroy();
+            sectionPlane = null;
+            mouseEvent.target.checked = false;
+        }
+        else {
+            viewer.cameraControl.on("picked", (e) => {
+                if (!sectionPlane) {
+                    const hit = viewer.scene.pick({
+                        canvasPos: e.canvasPos,
+                        pickSurface: true,
+                    });
+                    if (hit && hit.worldNormal) {
+                        sectionPlane = sectionPlanes.createSectionPlane({
+                            pos: hit.worldPos,
+                            dir: math.mulVec3Scalar(hit.worldNormal, -1),
+                        });
+                    }
+                    sectionPlanes.showControl(sectionPlane.id);
+                }
+            });
+            mouseEvent.target.checked = true;
+        }
+    };
 }
