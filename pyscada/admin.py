@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from pyscada.models import Device, DeviceProtocol, DeviceHandler
+from django.template import Library
+
+from pyscada.models import Device, DeviceProtocol, DeviceHandler, ChartLibrarie
 from pyscada.models import Variable, VariableProperty
 from pyscada.models import PeriodicField, CalculatedVariableSelector, CalculatedVariable
 from pyscada.models import Scaling, Color
@@ -32,6 +34,13 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+#Librairies
+
+class ChartLibrarieAdmin(admin.ModelAdmin):
+    list_display = ('id', 'title',)
+    list_display_links = ('id', 'title',)
+    save_as = True
+    save_as_continue = True
 
 # Custom AdminSite
 
@@ -709,6 +718,7 @@ class DictionaryAdmin(admin.ModelAdmin):
 
 
 admin_site = PyScadaAdminSite(name='pyscada_admin')
+admin_site.register(ChartLibrarie, ChartLibrarieAdmin)
 admin_site.register(Device, DeviceAdmin)
 admin_site.register(DeviceHandler, DeviceHandlerAdmin)
 admin_site.register(Variable, CoreVariableAdmin)

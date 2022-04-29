@@ -5,7 +5,7 @@ from pyscada.admin import admin_site
 
 from pyscada.models import Variable
 from pyscada.models import Color
-from pyscada.hmi.models import ControlItem
+from pyscada.hmi.models import Bar, ControlItem
 from pyscada.hmi.models import Chart, ChartAxis
 from pyscada.hmi.models import Form
 from pyscada.hmi.models import SlidingPanelMenu
@@ -27,6 +27,43 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+class ChartAxisInline(admin.TabularInline):
+    model = ChartAxis
+    filter_vertical = ['variables']
+
+    def get_extra(self, request, obj=None, **kwargs):
+        return 0 if obj else 1
+
+class BarForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(BarForm, self).__init__(*args, **kwargs)
+        wtf = Variable.objects.all()
+        w = self.fields['variables'].widget
+        choices = []
+        for choice in wtf:
+            choices.append((choice.id, choice.name + '( ' + choice.unit.description + ' )'))
+        w.choices = choices
+
+class BarAdmin(admin.ModelAdmin):
+    list_per_page = 100
+    # ordering = ['position',]
+    search_fields = ['title', ]
+    List_display_link = ('title',)
+    list_display = ('id', 'title','x_axis_label', 'y_axis_label',)
+    #list_filter = ('widget__page__title', 'widget__title',)
+    form = BarForm
+    save_as = True
+    save_as_continue = True
+
+    def name(self, instance):
+        return instance.variables.name
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == 'bar_x_axis_var':
+            kwargs['empty_label'] = "Time series"
+        return super(BarAdmin, self).formfield_for_foreignkey(db_field, request, **kwargs)
+
+
 class ChartForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(ChartForm, self).__init__(*args, **kwargs)
@@ -36,14 +73,6 @@ class ChartForm(forms.ModelForm):
         for choice in wtf:
             choices.append((choice.id, choice.name + '( ' + choice.unit.description + ' )'))
         w.choices = choices
-
-
-class ChartAxisInline(admin.TabularInline):
-    model = ChartAxis
-    filter_vertical = ['variables']
-
-    def get_extra(self, request, obj=None, **kwargs):
-        return 0 if obj else 1
 
 
 class ChartAdmin(admin.ModelAdmin):
@@ -259,7 +288,7 @@ class ProcessFlowDiagramAdmin(admin.ModelAdmin):
     save_as = True
     save_as_continue = True
 
-
+admin_site.register(Bar, BarAdmin)
 admin_site.register(ControlItem, ControlItemAdmin)
 admin_site.register(Chart, ChartAdmin)
 admin_site.register(Pie, PieAdmin)
@@ -275,3 +304,4 @@ admin_site.register(Widget, WidgetAdmin)
 admin_site.register(View, ViewAdmin)
 admin_site.register(ProcessFlowDiagram, ProcessFlowDiagramAdmin)
 admin_site.register(ProcessFlowDiagramItem, ProcessFlowDiagramItemAdmin)
+
