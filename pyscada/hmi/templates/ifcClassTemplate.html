@@ -1,24 +1,26 @@
-<div class="row">
-    <!-- Widget Row-->
-    {% if sidebarVisible %}
-        <div class="legend-sidebar col-xs-12 col-sm-12 col-md-3 col-lg-2">
-            {% for content in sidebarContent %}
-                {{ content.html|safe }}
-                <div class="clear-sep"></div>
-            {% endfor %}
-        </div>
-        <div class="col-xs-12 col-sm-12 col-md-9 col-lg-10">
-            <div class="row">
-            {% endif %}
-            {% for content in mainContent %}
-                <div id="widget_{{ content.widget.pk }}"
-                     class="widget {{ content.widget.css_class }}">
-                    <!-- {{ content.widget.title }} -->
+<div id="{{ classId }}" style="display: none">
+    <div class="row">
+        <!-- Widget Row-->
+        {% if sidebarVisible %}
+            <div class="legend-sidebar col-xs-12 col-sm-12 col-md-3 col-lg-2">
+                {% for content in sidebarContent %}
                     {{ content.html|safe }}
-                </div>
-            {% endfor %}
-            {% if sidebar_visible %}
+                    <div class="clear-sep"></div>
+                {% endfor %}
             </div>
-        </div>
-    {% endif %}
+            <div class="col-xs-12 col-sm-12 col-md-9 col-lg-10">
+                <div class="row">
+                {% endif %}
+                {% for content in mainContent %}
+                    <div id="widget_{{ content.widget.pk }}"
+                         class="widget {{ content.widget.css_class }}">
+                        <!-- {{ content.widget.title }} -->
+                        {{ content.html|safe }}
+                    </div>
+                {% endfor %}
+                {% if sidebarVisible %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
 </div>

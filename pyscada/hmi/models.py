@@ -729,6 +729,7 @@ class Bim3DModel(WidgetContentModel):
                     isChart = True
             ret.append(ifcClassTemplate.render(
                 {
+                    'classId': ifcClass.id,
                     'mainContent': mainContent,
                     'sidebarContent': sidebarContent,
                     'sidebarVisible': len(sidebarContent) > 0,

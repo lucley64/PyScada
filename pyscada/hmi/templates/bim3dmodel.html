@@ -18,8 +18,8 @@
         <canvas id="3dmodel-canvas"></canvas>
         <canvas id="nav-cube-canvas"></canvas>
     </div>
-    <div id="model-properties-container"></div>
+    <div id="model-properties-container">
+        <div id="class-properties-container" style="display: none;"></div>
+        {% for class in classesContent %}{{ class }}{% endfor %}
+    </div>
 </div>
-{% for class in classesContent %}
-    {{ class|safe }}
-{% endfor %}

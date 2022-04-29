@@ -608,13 +608,34 @@ canvas#\33 dmodel-canvas {
 
 canvas#nav-cube-canvas {
     z-index: 200000;
-    right: 1%;
+    right: calc(500px + 1%);
     bottom: 0;
     height: 200px;
     width: 200px;
     position: absolute;
 }
 
+div#model-properties-container {
+	position: absolute;
+	height: 100%;
+	overflow-y: scroll;
+	overflow-x: scroll;
+	pointer-events: all;
+	background-color: rgba(255, 255, 255, 0.2);
+	color: #000;
+	z-index: 200000;
+	font-size: medium;
+	user-select: none;
+	-ms-user-select: none;
+	-moz-user-select: none;
+	-webkit-user-select: none;
+	width: 500px;
+	float: right;
+	padding-right: 2%;
+	padding-left: 2%;
+	padding-top: 2%;
+	right: 0;
+}
 /* ----------------------------------------------------------------------------------------------------------*/
 /*  style of the TreeViewPlugin for the 3d model */
 /* ----------------------------------------------------------------------------------------------------------*/
@@ -748,4 +769,126 @@ div.model-viewer{
 div.model-menu{
 	width: 25%;
 	float: left;
+}
+
+.xeokit-context-menu {
+    font-family: 'Roboto', sans-serif;
+    font-size: 15px;
+    display: none;
+    z-index: 300000;
+    background: rgba(255, 255, 255, 0.46);
+    border: 1px solid black;
+    border-radius: 6px;
+    padding: 0;
+    width: 200px;
+}
+
+.xeokit-context-menu ul {
+    list-style: none;
+    margin-left: 0;
+    padding: 0;
+}
+
+.xeokit-context-menu ul li {
+    list-style-type: none;
+    padding-left: 10px;
+    padding-right: 20px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    color: black;
+    border-bottom: 1px solid gray;
+    background: rgba(255, 255, 255, 0.46);
+    cursor: pointer;
+    width: calc(100% - 30px);
+}
+
+.xeokit-context-menu ul li:hover {
+    background: black;
+    color: white;
+    font-weight: normal;
+}
+
+.xeokit-context-menu ul li span {
+    display: inline-block;
+}
+
+.xeokit-context-menu .disabled {
+    display: inline-block;
+    color: gray;
+    cursor: default;
+    font-weight: normal;
+}
+
+.xeokit-context-menu .disabled:hover {
+    color: gray;
+    cursor: default;
+    background: #eeeeee;
+    font-weight: normal;
+}
+
+div.model-properties-wrap-collabsible input[type='checkbox'] {
+	display: none;
+}
+
+div.model-properties-wrap-collabsible {
+	margin: 1.2rem 0;
+}
+
+label.model-properties-lbl-toggle {
+	display: block;
+	font-weight: bold;
+	text-align: center;
+	padding: 1rem;
+	color: #000;
+	background: #F1F1F1;
+	cursor: pointer;
+	border-radius: 7px;
+	transition: all 0.25s ease-out;
+}
+
+label.model-properties-lbl-toggle:hover {
+	color: #444;
+}
+
+label.model-properties-lbl-toggle::before {
+	content: ' ';
+	display: inline-block;
+	border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-left: 5px solid currentColor;
+    vertical-align: middle;
+    margin-right: .7rem;
+    transform: translateY(-2px);
+    transition: transform .2s ease-out;
+}
+
+input.model-properties-toggle:checked+label.model-properties-lbl-toggle::before {
+    transform: rotate(90deg) translateX(-3px);
+}
+
+div.model-properties-collapsible-content {
+    max-height: 0px;
+    overflow: hidden;
+    transition: max-height .25s ease-in-out;
+}
+
+input.model-properties-toggle:checked+label.model-properties-lbl-toggle+div.model-properties-collapsible-content {
+    max-height: 350px;
+}
+
+input.model-properties-toggle:checked+label.model-properties-lbl-toggle {
+    border-bottom-right-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+div.model-properties-collapsible-content div.model-properties-content-inner {
+    background: inherit;
+    border: 1px solid rgba(0, 0, 0, 0.45);
+    border-bottom-left-radius: 7px;
+    border-bottom-right-radius: 7px;
+    padding: .5rem 1rem;
+}
+
+div.model-properties-collapsible-content p {
+    margin-bottom: 0;
 }
