@@ -32824,6 +32824,428 @@ math.vec3();
 math.vec3();
 
 /**
+ * {@link Viewer} plugin that makes interaction smoother with large models, by temporarily switching
+ * the Viewer to faster, lower-quality rendering modes whenever we interact.
+ *
+ * [<img src="https://xeokit.io/img/docs/FastNavPlugin/FastNavPlugin.gif">](https://xeokit.github.io/xeokit-sdk/examples/#performance_FastNavPlugin)
+ *
+ * FastNavPlugin works by hiding specified Viewer rendering features, and optionally scaling the Viewer's canvas
+ * resolution, whenever we interact with the Viewer. Then, once we've finished interacting, FastNavPlugin restores those
+ * rendering features and the original canvas scale, after a configured delay.
+ *
+ * Depending on how we configure FastNavPlugin, we essentially switch to a smooth-rendering low-quality view while
+ * interacting, then return to the normal higher-quality view after we stop, following an optional delay.
+ *
+ * Down-scaling the canvas resolution gives particularly good results. For example, scaling by ````0.5```` means that
+ * we're rendering a quarter of the pixels while interacting, which can make the Viewer noticeably smoother with big models.
+ *
+ * The screen capture above shows FastNavPlugin in action. In this example, whenever we move the Camera or resize the Canvas,
+ * FastNavPlugin switches off enhanced edges and ambient shadows (SAO), and down-scales the canvas, making it slightly
+ * blurry. When ````0.5```` seconds passes with no interaction, the plugin shows edges and SAO again, and restores the
+ * original canvas scale.
+ *
+ * # Usage
+ *
+ * In the example below, we'll create a {@link Viewer}, add a {@link FastNavPlugin}, then use an {@link XKTLoaderPlugin} to load a model.
+ *
+ * Whenever we interact with the Viewer, our FastNavPlugin will:
+ *
+ * * hide edges,
+ * * hide ambient shadows (SAO),
+ * * hide physically-based materials (switching to non-PBR),
+ * * hide transparent objects, and
+ * * scale the canvas resolution by 0.5, causing the GPU to render 75% less pixels.
+ * <br>
+ *
+ * We'll also configure a 0.5 second delay before we transition back to high-quality each time we stop ineracting, so that we're
+ * not continually flipping between low and high quality as we interact. Since we're only rendering ambient shadows when not interacting, we'll also treat ourselves
+ * to expensive, high-quality SAO settings, that we wouldn't normally configure for an interactive SAO effect.
+ *
+ * * [[Run this example](https://xeokit.github.io/xeokit-sdk/examples/#performance_FastNavPlugin)]
+ *
+ * ````javascript
+ * import {Viewer, XKTLoaderPlugin, FastNavPlugin} from "xeokit-sdk.es.js";
+ *
+ * // Create a Viewer with PBR and SAO enabled
+ *
+ * const viewer = new Viewer({
+ *      canvasId: "myCanvas",
+ *      transparent: true,
+ *      pbr: true,                          // Enable physically-based rendering for Viewer
+ *      sao: true                           // Enable ambient shadows for Viewer
+ *  });
+ *
+ * viewer.scene.camera.eye = [-66.26, 105.84, -281.92];
+ * viewer.scene.camera.look = [42.45, 49.62, -43.59];
+ * viewer.scene.camera.up = [0.05, 0.95, 0.15];
+ *
+ * // Higher-quality SAO settings
+ *
+ * viewer.scene.sao.enabled = true;
+ * viewer.scene.sao.numSamples = 60;
+ * viewer.scene.sao.kernelRadius = 170;
+ *
+ * // Install a FastNavPlugin
+ *
+ * new FastNavPlugin(viewer, {
+ *      hideEdges: true,                // Don't show edges while we interact (default is true)
+ *      hideSAO: true,                  // Don't show ambient shadows while we interact (default is true)
+ *      hideColorTexture: true,        // No color textures while we interact (default is true)
+ *      hidePBR: true,                  // No physically-based rendering while we interact (default is true)
+ *      hideTransparentObjects: true,   // Hide transparent objects while we interact (default is false)
+ *      scaleCanvasResolution: true,    // Scale canvas resolution while we interact (default is false)
+ *      scaleCanvasResolutionFactor: 0.5,  // Factor by which we scale canvas resolution when we interact (default is 0.6)
+ *      delayBeforeRestore: true,       // When we stop interacting, delay before restoring normal render (default is true)
+ *      delayBeforeRestoreSeconds: 0.5  // The delay duration, in seconds (default is 0.5)
+ * });
+ *
+ * // Load a BIM model from XKT
+ *
+ * const xktLoader = new XKTLoaderPlugin(viewer);
+ *
+ * const model = xktLoader.load({
+ *      id: "myModel",
+ *      src: "./models/xkt/HolterTower.xkt",
+ *      sao: true,                          // Enable ambient shadows for this model
+ *      pbr: true                           // Enable physically-based rendering for this model
+ * });
+ * ````
+ *
+ * @class FastNavPlugin
+ */
+class FastNavPlugin extends Plugin {
+
+    /**
+     * @constructor
+     * @param {Viewer} viewer The Viewer.
+     * @param {Object} cfg FastNavPlugin configuration.
+     * @param {String} [cfg.id="FastNav"] Optional ID for this plugin, so that we can find it within {@link Viewer#plugins}.
+     * @param {Boolean} [cfg.hideColorTexture=true] Whether to temporarily hide color textures whenever we interact with the Viewer.
+     * @param {Boolean} [cfg.hidePBR=true] Whether to temporarily hide physically-based rendering (PBR) whenever we interact with the Viewer.
+     * @param {Boolean} [cfg.hideSAO=true] Whether to temporarily hide scalable ambient occlusion (SAO) whenever we interact with the Viewer.
+     * @param {Boolean} [cfg.hideEdges=true] Whether to temporarily hide edges whenever we interact with the Viewer.
+     * @param {Boolean} [cfg.hideTransparentObjects=false] Whether to temporarily hide transparent objects whenever we interact with the Viewer.
+     * @param {Number} [cfg.scaleCanvasResolution=false] Whether to temporarily down-scale the canvas resolution whenever we interact with the Viewer.
+     * @param {Number} [cfg.scaleCanvasResolutionFactor=0.6] The factor by which we downscale the canvas resolution whenever we interact with the Viewer.
+     * @param {Boolean} [cfg.delayBeforeRestore=true] Whether to temporarily have a delay before restoring normal rendering after we stop interacting with the Viewer.
+     * @param {Number} [cfg.delayBeforeRestoreSeconds=0.5] Delay in seconds before restoring normal rendering after we stop interacting with the Viewer.
+     */
+    constructor(viewer, cfg = {}) {
+
+        super("FastNav", viewer);
+
+        this._hideColorTexture = cfg.hideColorTexture !== false;
+        this._hidePBR = cfg.hidePBR !== false;
+        this._hideSAO = cfg.hideSAO !== false;
+        this._hideEdges = cfg.hideEdges !== false;
+        this._hideTransparentObjects = !!cfg.hideTransparentObjects;
+        this._scaleCanvasResolution = !!cfg.scaleCanvasResolution;
+        this._scaleCanvasResolutionFactor = cfg.scaleCanvasResolutionFactor || 0.6;
+        this._delayBeforeRestore = (cfg.delayBeforeRestore !== false);
+        this._delayBeforeRestoreSeconds = cfg.delayBeforeRestoreSeconds || 0.5;
+
+        let timer = this._delayBeforeRestoreSeconds * 1000;
+        let fastMode = false;
+
+        const switchToLowQuality = () => {
+            timer = (this._delayBeforeRestoreSeconds * 1000);
+            if (!fastMode) {
+                viewer.scene._renderer.setColorTextureEnabled(!this._hideColorTexture);
+                viewer.scene._renderer.setPBREnabled(!this._hidePBR);
+                viewer.scene._renderer.setSAOEnabled(!this._hideSAO);
+                viewer.scene._renderer.setTransparentEnabled(!this._hideTransparentObjects);
+                viewer.scene._renderer.setEdgesEnabled(!this._hideEdges);
+                if (this._scaleCanvasResolution) {
+                    viewer.scene.canvas.resolutionScale = this._scaleCanvasResolutionFactor;
+                } else {
+                    viewer.scene.canvas.resolutionScale = 1;
+                }
+                fastMode = true;
+            }
+        };
+
+        const switchToHighQuality = () => {
+            viewer.scene.canvas.resolutionScale = 1;
+            viewer.scene._renderer.setEdgesEnabled(true);
+            viewer.scene._renderer.setColorTextureEnabled(true);
+            viewer.scene._renderer.setPBREnabled(true);
+            viewer.scene._renderer.setSAOEnabled(true);
+            viewer.scene._renderer.setTransparentEnabled(true);
+            fastMode = false;
+        };
+
+        this._onCanvasBoundary = viewer.scene.canvas.on("boundary", switchToLowQuality);
+        this._onCameraMatrix = viewer.scene.camera.on("matrix", switchToLowQuality);
+
+        this._onSceneTick = viewer.scene.on("tick", (tickEvent) => {
+            if (!fastMode) {
+                return;
+            }
+            timer -= tickEvent.deltaTime;
+            if ((!this._delayBeforeRestore) || timer <= 0) {
+                switchToHighQuality();
+            }
+        });
+
+        let down = false;
+
+        this._onSceneMouseDown = viewer.scene.input.on("mousedown", () => {
+            down = true;
+        });
+
+        this._onSceneMouseUp = viewer.scene.input.on("mouseup", () => {
+            down = false;
+        });
+
+        this._onSceneMouseMove = viewer.scene.input.on("mousemove", () => {
+            if (!down) {
+                return;
+            }
+            switchToLowQuality();
+        });
+    }
+
+    /**
+     * Gets whether to temporarily hide color textures whenever we interact with the Viewer.
+     *
+     * Default is ````true````.
+     *
+     * @return {Boolean} ````true```` if hiding color textures.
+     */
+    get hideColorTexture() {
+        return this._hideColorTexture;
+    }
+
+    /**
+     * Sets whether to temporarily hide color textures whenever we interact with the Viewer.
+     *
+     * Default is ````true````.
+     *
+     * @param {Boolean} hideColorTexture ````true```` to hide color textures.
+     */
+    set hideColorTexture(hideColorTexture) {
+        this._hideColorTexture = hideColorTexture;
+    }
+    
+    /**
+     * Gets whether to temporarily hide physically-based rendering (PBR) whenever we interact with the Viewer.
+     *
+     * Default is ````true````.
+     *
+     * @return {Boolean} ````true```` if hiding PBR.
+     */
+    get hidePBR() {
+        return this._hidePBR;
+    }
+
+    /**
+     * Sets whether to temporarily hide physically-based rendering (PBR) whenever we interact with the Viewer.
+     *
+     * Default is ````true````.
+     *
+     * @param {Boolean} hidePBR ````true```` to hide PBR.
+     */
+    set hidePBR(hidePBR) {
+        this._hidePBR = hidePBR;
+    }
+
+    /**
+     * Gets whether to temporarily hide scalable ambient shadows (SAO) whenever we interact with the Viewer.
+     *
+     * Default is ````true````.
+     *
+     * @return {Boolean} ````true```` if hiding SAO.
+     */
+    get hideSAO() {
+        return this._hideSAO;
+    }
+
+    /**
+     * Sets whether to temporarily hide scalable ambient shadows (SAO) whenever we interact with the Viewer.
+     *
+     * Default is ````true````.
+     *
+     * @param {Boolean} hideSAO ````true```` to hide SAO.
+     */
+    set hideSAO(hideSAO) {
+        this._hideSAO = hideSAO;
+    }
+
+    /**
+     * Gets whether to temporarily hide edges whenever we interact with the Viewer.
+     *
+     * Default is ````true````.
+     *
+     * @return {Boolean}  ````true```` if hiding edges.
+     */
+    get hideEdges() {
+        return this._hideEdges;
+    }
+
+    /**
+     * Sets whether to temporarily hide edges whenever we interact with the Viewer.
+     *
+     * Default is ````true````.
+     *
+     * @param {Boolean} hideEdges ````true```` to hide edges.
+     */
+    set hideEdges(hideEdges) {
+        this._hideEdges = hideEdges;
+    }
+
+    /**
+     * Gets whether to temporarily hide transparent objects whenever we interact with the Viewer.
+     *
+     * Does not hide X-rayed, selected, highlighted objects.
+     *
+     * Default is ````false````.
+     *
+     * @return {Boolean} ````true```` if hiding transparent objects.
+     */
+    get hideTransparentObjects() {
+        return this._hideTransparentObjects
+    }
+
+    /**
+     * Sets whether to temporarily hide transparent objects whenever we interact with the Viewer.
+     *
+     * Does not hide X-rayed, selected, highlighted objects.
+     *
+     * Default is ````false````.
+     *
+     * @param {Boolean} hideTransparentObjects ````true```` to hide transparent objects.
+     */
+    set hideTransparentObjects(hideTransparentObjects) {
+        this._hideTransparentObjects = (hideTransparentObjects !== false);
+    }
+
+    /**
+     * Gets whether to temporarily scale the canvas resolution whenever we interact with the Viewer.
+     *
+     * Default is ````false````.
+     *
+     * The scaling factor is configured via {@link FastNavPlugin#scaleCanvasResolutionFactor}.
+     *
+     * @return {Boolean} ````true```` if scaling the canvas resolution.
+     */
+    get scaleCanvasResolution() {
+        return this._scaleCanvasResolution;
+    }
+
+    /**
+     * Sets whether to temporarily scale the canvas resolution whenever we interact with the Viewer.
+     *
+     * Default is ````false````.
+     *
+     * The scaling factor is configured via {@link FastNavPlugin#scaleCanvasResolutionFactor}.
+     *
+     * @param {Boolean} scaleCanvasResolution ````true```` to scale the canvas resolution.
+     */
+    set scaleCanvasResolution(scaleCanvasResolution) {
+        this._scaleCanvasResolution = scaleCanvasResolution;
+    }
+
+    /**
+     * Gets the factor by which we temporarily scale the canvas resolution when we interact with the viewer.
+     *
+     * Default is ````0.6````.
+     *
+     * Enable canvas resolution scaling by setting {@link FastNavPlugin#scaleCanvasResolution} ````true````.
+     *
+     * @return {Number} Factor by which we scale the canvas resolution.
+     */
+    get scaleCanvasResolutionFactor() {
+        return this._scaleCanvasResolutionFactor;
+    }
+
+    /**
+     * Sets the factor by which we temporarily scale the canvas resolution when we interact with the viewer.
+     *
+     * Accepted range is ````[0.0 .. 1.0]````.
+     *
+     * Default is ````0.6````.
+     *
+     * Enable canvas resolution scaling by setting {@link FastNavPlugin#scaleCanvasResolution} ````true````.
+     *
+     * @param {Number} scaleCanvasResolutionFactor Factor by which we scale the canvas resolution.
+     */
+    set scaleCanvasResolutionFactor(scaleCanvasResolutionFactor) {
+        this._scaleCanvasResolutionFactor = scaleCanvasResolutionFactor || 0.6;
+    }
+
+    /**
+     * Gets whether to have a delay before restoring normal rendering after we stop interacting with the Viewer.
+     *
+     * The delay duration is configured via {@link FastNavPlugin#delayBeforeRestoreSeconds}.
+     *
+     * Default is ````true````.
+     *
+     * @return {Boolean} Whether to have a delay.
+     */
+    get delayBeforeRestore() {
+        return this._delayBeforeRestore;
+    }
+
+    /**
+     * Sets whether to have a delay before restoring normal rendering after we stop interacting with the Viewer.
+     *
+     * The delay duration is configured via {@link FastNavPlugin#delayBeforeRestoreSeconds}.
+     *
+     * Default is ````true````.
+     *
+     * @param {Boolean} delayBeforeRestore Whether to have a delay.
+     */
+    set delayBeforeRestore(delayBeforeRestore) {
+        this._delayBeforeRestore = delayBeforeRestore;
+    }
+
+    /**
+     * Gets the delay before restoring normal rendering after we stop interacting with the Viewer.
+     *
+     * The delay is enabled when {@link FastNavPlugin#delayBeforeRestore} is ````true````.
+     *
+     * Default is ````0.5```` seconds.
+     *
+     * @return {Number} Delay in seconds.
+     */
+    get delayBeforeRestoreSeconds() {
+        return this._delayBeforeRestoreSeconds;
+    }
+
+    /**
+     * Sets the delay before restoring normal rendering after we stop interacting with the Viewer.
+     *
+     * The delay is enabled when {@link FastNavPlugin#delayBeforeRestore} is ````true````.
+     *
+     * Default is ````0.5```` seconds.
+     *
+     * @param {Number} delayBeforeRestoreSeconds Delay in seconds.
+     */
+    set delayBeforeRestoreSeconds(delayBeforeRestoreSeconds) {
+        this._delayBeforeRestoreSeconds = delayBeforeRestoreSeconds !== null && delayBeforeRestoreSeconds !== undefined ? delayBeforeRestoreSeconds : 0.5;
+    }
+
+    /**
+     * @private
+     */
+    send(name, value) {
+    }
+
+    /**
+     * Destroys this plugin.
+     */
+    destroy() {
+        this.viewer.scene.camera.off(this._onCameraMatrix);
+        this.viewer.scene.canvas.off(this._onCanvasBoundary);
+        this.viewer.scene.input.off(this._onSceneMouseDown);
+        this.viewer.scene.input.off(this._onSceneMouseUp);
+        this.viewer.scene.input.off(this._onSceneMouseMove);
+        this.viewer.scene.off(this._onSceneTick);
+        super.destroy();
+    }
+}
+
+/**
  * @private
  * @implements Pickable
  */
@@ -68952,9 +69374,608 @@ class TreeViewPlugin extends Plugin {
     }
 }
 
-math.vec3();
-math.vec3();
-math.mat4();
+const tempVec3a$5 = math.vec3();
+const tempVec3b$5 = math.vec3();
+const tempMat4a = math.mat4();
+
+/**
+ * @private
+ */
+class FrustumPlane {
+
+    constructor() {
+        this.normal = math.vec3();
+        this.offset = 0;
+        this.testVertex = math.vec3();
+    }
+
+    set(nx, ny, nz, offset) {
+        const s = 1.0 / Math.sqrt(nx * nx + ny * ny + nz * nz);
+        this.normal[0] = nx * s;
+        this.normal[1] = ny * s;
+        this.normal[2] = nz * s;
+        this.offset = offset * s;
+        this.testVertex[0] = (this.normal[0] >= 0.0) ? 1 : 0;
+        this.testVertex[1] = (this.normal[1] >= 0.0) ? 1 : 0;
+        this.testVertex[2] = (this.normal[2] >= 0.0) ? 1 : 0;
+    }
+}
+
+/**
+ * @private
+ */
+class Frustum {
+    constructor() {
+        this.planes = [
+            new FrustumPlane(), new FrustumPlane(), new FrustumPlane(),
+            new FrustumPlane(), new FrustumPlane(), new FrustumPlane()
+        ];
+    }
+}
+
+Frustum.INSIDE = 0;
+Frustum.INTERSECT = 1;
+Frustum.OUTSIDE = 2;
+
+/** @private */
+function setFrustum(frustum, viewMat, projMat) {
+
+    const m = math.mulMat4(projMat, viewMat, tempMat4a);
+
+    const m0 = m[0];
+    const m1 = m[1];
+    const m2 = m[2];
+    const m3 = m[3];
+    const m4 = m[4];
+    const m5 = m[5];
+    const m6 = m[6];
+    const m7 = m[7];
+    const m8 = m[8];
+    const m9 = m[9];
+    const m10 = m[10];
+    const m11 = m[11];
+    const m12 = m[12];
+    const m13 = m[13];
+    const m14 = m[14];
+    const m15 = m[15];
+
+    frustum.planes[0].set(m3 - m0, m7 - m4, m11 - m8, m15 - m12);
+    frustum.planes[1].set(m3 + m0, m7 + m4, m11 + m8, m15 + m12);
+    frustum.planes[2].set(m3 - m1, m7 - m5, m11 - m9, m15 - m13);
+    frustum.planes[3].set(m3 + m1, m7 + m5, m11 + m9, m15 + m13);
+    frustum.planes[4].set(m3 - m2, m7 - m6, m11 - m10, m15 - m14);
+    frustum.planes[5].set(m3 + m2, m7 + m6, m11 + m10, m15 + m14);
+}
+
+/** @private */
+function frustumIntersectsAABB3(frustum, aabb) {
+
+    let ret = Frustum.INSIDE;
+
+    const min = tempVec3a$5;
+    const max = tempVec3b$5;
+
+    min[0] = aabb[0];
+    min[1] = aabb[1];
+    min[2] = aabb[2];
+    max[0] = aabb[3];
+    max[1] = aabb[4];
+    max[2] = aabb[5];
+
+    const bminmax = [min, max];
+
+    for (let i = 0; i < 6; ++i) {
+        const plane = frustum.planes[i];
+        if (((plane.normal[0] * bminmax[plane.testVertex[0]][0]) +
+            (plane.normal[1] * bminmax[plane.testVertex[1]][1]) +
+            (plane.normal[2] * bminmax[plane.testVertex[2]][2]) +
+            (plane.offset)) < 0.0) {
+            return Frustum.OUTSIDE;
+        }
+
+        if (((plane.normal[0] * bminmax[1 - plane.testVertex[0]][0]) +
+            (plane.normal[1] * bminmax[1 - plane.testVertex[1]][1]) +
+            (plane.normal[2] * bminmax[1 - plane.testVertex[2]][2]) +
+            (plane.offset)) < 0.0) {
+            ret = Frustum.INTERSECT;
+        }
+    }
+
+    return ret;
+}
+
+/**
+ * For each Entity in its Scene, efficiently combines updates from multiple culling systems into a single "culled" state.
+ *
+ * Two culling systems are supported:
+ *
+ * * View culling - culls Entities when they fall outside the current view frustum, and
+ * * Detail culling - momentarily culls less visually-significant Entities while we are moving the camera.
+ *
+ * @private
+ */
+class ObjectCullStates {
+
+    /**
+     * @private
+     * @param scene
+     */
+    constructor(scene) {
+
+        this._scene = scene;
+
+        this._objects = []; // Array of all Entity instances that represent objects
+        this._objectsViewCulled = []; // A flag for each object to indicate its view-cull status
+        this._objectsDetailCulled = []; // A flag for each object to indicate its detail-cull status
+        this._objectsChanged = []; // A flag for each object, set whenever its cull status has changed since last _applyChanges()
+        this._objectsChangedList = []; // A list of objects whose cull status has changed, applied and cleared by _applyChanges()
+
+        this._modelInfos = {};
+
+        this._numObjects = 0;
+        this._lenObjectsChangedList = 0;
+
+        this._dirty = true;
+
+        this._onModelLoaded = scene.on("modelLoaded", (modelId) => {
+            const model = scene.models[modelId];
+            if (model) {
+                this._addModel(model);
+            }
+        });
+
+        this._onTick = scene.on("tick", () => {
+            if (this._dirty) {
+                this._build();
+            }
+            this._applyChanges();
+        });
+    }
+
+    _addModel(model) {
+        const modelInfo = {
+            model: model,
+            onDestroyed: model.on("destroyed", () => {
+                this._removeModel(model);
+            })
+        };
+        this._modelInfos[model.id] = modelInfo;
+        this._dirty = true;
+    }
+
+    _removeModel(model) {
+        const modelInfo = this._modelInfos[model.id];
+        if (modelInfo) {
+            modelInfo.model.off(modelInfo.onDestroyed);
+            delete this._modelInfos[model.id];
+            this._dirty = true;
+        }
+    }
+
+    _build() {
+        if (!this._dirty) {
+            return;
+        }
+        this._applyChanges();
+        const objects = this._scene.objects;
+        for (let i = 0; i < this._numObjects; i++) {
+            this._objects[i] = null;
+        }
+        this._numObjects = 0;
+        for (let objectId in objects) {
+            const entity = objects[objectId];
+            this._objects[this._numObjects++] = entity;
+        }
+        this._lenObjectsChangedList = 0;
+        this._dirty = false;
+    }
+
+    _applyChanges() {
+        if (this._lenObjectsChangedList > 0) {
+            for (let i = 0; i < this._lenObjectsChangedList; i++) {
+                const objectIdx = this._objectsChangedList[i];
+                const object = this._objects[objectIdx];
+                const viewCulled = this._objectsViewCulled[objectIdx];
+                const detailCulled = this._objectsDetailCulled[objectIdx];
+                const culled = (viewCulled || detailCulled);
+                object.culled = culled;
+                this._objectsChanged[objectIdx] = false;
+            }
+            this._lenObjectsChangedList = 0;
+        }
+    }
+
+    /**
+     * Array of {@link Entity} instances that represent objects in the {@link Scene}.
+     *
+     * ObjectCullStates rebuilds this from {@link Scene#objects} whenever ````Scene```` fires a ````modelLoaded```` event.
+     *
+     * @returns {Entity[]}
+     */
+    get objects() {
+        if (this._dirty) {
+            this._build();
+        }
+        return this._objects;
+    }
+
+    /**
+     * Number of objects in {@link ObjectCullStates#objects},
+     *
+     * Updated whenever ````Scene```` fires a ````modelLoaded```` event.
+     *
+     * @returns {Number}
+     */
+    get numObjects() {
+        if (this._dirty) {
+            this._build();
+        }
+        return this._numObjects;
+    }
+
+    /**
+     * Updates an object's view-cull status.
+     *
+     * @param {Number} objectIdx Index of the object in {@link ObjectCullStates#objects}
+     * @param {boolean} culled Whether to view-cull or not.
+     */
+    setObjectViewCulled(objectIdx, culled) {
+        if (this._dirty) {
+            this._build();
+        }
+        if (this._objectsViewCulled[objectIdx] === culled) {
+            return;
+        }
+        this._objectsViewCulled[objectIdx] = culled;
+        if (!this._objectsChanged[objectIdx]) {
+            this._objectsChanged[objectIdx] = true;
+            this._objectsChangedList[this._lenObjectsChangedList++] = objectIdx;
+        }
+    }
+
+    /**
+     * Updates an object's detail-cull status.
+     *
+     * @param {Number} objectIdx Index of the object in {@link ObjectCullStates#objects}
+     * @param {boolean} culled Whether to detail-cull or not.
+     */
+    setObjectDetailCulled(objectIdx, culled) {
+        if (this._dirty) {
+            this._build();
+        }
+        if (this._objectsDetailCulled[objectIdx] === culled) {
+            return;
+        }
+        this._objectsDetailCulled[objectIdx] = culled;
+        if (!this._objectsChanged[objectIdx]) {
+            this._objectsChanged[objectIdx] = true;
+            this._objectsChangedList[this._lenObjectsChangedList++] = objectIdx;
+        }
+    }
+
+    /**
+     * Destroys this ObjectCullStAtes.
+     */
+    _destroy() {
+        this._clear();
+        this._scene.off(this._onModelLoaded);
+        this._scene.off(this._onTick);
+    }
+
+    _clear() {
+        for (let modelId in this._modelInfos) {
+            const modelInfo = this._modelInfos[modelId];
+            modelInfo.model.off(modelInfo.onDestroyed);
+        }
+        this._modelInfos = {};
+        this._dirty = true;
+    }
+}
+
+const sceneObjectCullStates = {};
+
+/**
+ * @private
+ */
+function getObjectCullStates(scene) {
+    const sceneId = scene.id;
+    let objectCullStates = sceneObjectCullStates[sceneId];
+    if (!objectCullStates) {
+        objectCullStates = new ObjectCullStates(scene);
+        sceneObjectCullStates[sceneId] = objectCullStates;
+        scene.on("destroyed", () => {
+            delete sceneObjectCullStates[sceneId];
+            objectCullStates._destroy();
+        });
+    }
+    return objectCullStates;
+}
+
+const MAX_KD_TREE_DEPTH = 8; // Increase if greater precision needed
+
+const kdTreeDimLength = new Float32Array(3);
+
+/**
+ * {@link Viewer} plugin that performs view frustum culling to accelerate rendering performance.
+ *
+ * For each {@link Entity} that represents an object, ````ViewCullPlugin```` will automatically
+ * set {@link Entity#culled}````false```` whenever it falls outside our field of view.
+ *
+ * When culled, an ````Entity```` is not processed by xeokit's renderer.
+ *
+ * Internally, ````ViewCullPlugin```` organizes {@link Entity}s in
+ * a [bounding volume hierarchy](https://en.wikipedia.org/wiki/Bounding_volume_hierarchy), implemented as
+ * a [kd-tree](https://en.wikipedia.org/wiki/K-d_tree).
+ *
+ * On each {@link Scene} "tick" event, ````ViewCullPlugin```` searches the kd-tree using a frustum generated from
+ * the {@link Camera}, marking each ````Entity```` **culled** if it falls outside the frustum.
+ *
+ * Use ````ViewCullPlugin```` by simply adding it to your ````Viewer````:
+ *
+ * ````javascript
+ * const viewer = new Viewer({
+ *    canvasId: "myCanvas",
+ *    transparent: true
+ * });
+ *
+ * const viewCullPlugin = new ViewCullPlugin(viewer, {
+ *    maxTreeDepth: 20
+ * });
+ *
+ * const xktLoader = new XKTLoaderPlugin(viewer);
+ *
+ * const model = xktLoader.load({
+ *      id: "myModel",
+ *      src: "./models/xkt/OTCConferenceCenter.xkt"
+ * });
+ * ````
+ */
+class ViewCullPlugin extends Plugin {
+
+    /**
+     * @constructor
+     * @param {Viewer} viewer The Viewer.
+     * @param {Object} cfg  Plugin configuration.
+     * @param {String} [cfg.id="ViewCull"] Optional ID for this plugin, so that we can find it within {@link Viewer#plugins}.
+     * @param {Number} [cfg.maxTreeDepth=8] Maximum depth of the kd-tree.
+     */
+    constructor(viewer, cfg = {}) {
+
+        super("ViewCull", viewer);
+
+        this._objectCullStates = getObjectCullStates(viewer.scene); // Combines updates from multiple culling systems for its Scene's Entities
+
+        this._maxTreeDepth = cfg.maxTreeDepth || MAX_KD_TREE_DEPTH;
+        this._modelInfos = {};
+        this._frustum = new Frustum();
+        this._kdRoot = null;
+
+        this._frustumDirty = false;
+        this._kdTreeDirty = false;
+
+        this._onViewMatrix = viewer.scene.camera.on("viewMatrix", () => {
+            this._frustumDirty = true;
+        });
+
+        this._onProjMatrix = viewer.scene.camera.on("projMatMatrix", () => {
+            this._frustumDirty = true;
+        });
+
+        this._onModelLoaded = viewer.scene.on("modelLoaded", (modelId) => {
+            const model = this.viewer.scene.models[modelId];
+            if (model) {
+                this._addModel(model);
+            }
+        });
+
+        this._onSceneTick = viewer.scene.on("tick", () => {
+            this._doCull();
+        });
+    }
+
+    /**
+     * Sets whether view culling is enabled.
+     *
+     * @param {Boolean} enabled Whether to enable view culling.
+     */
+    set enabled(enabled) {
+        this._enabled = enabled;
+    }
+
+    /**
+     * Gets whether view culling is enabled.
+     *
+     * @retutns {Boolean} Whether view culling is enabled.
+     */
+    get enabled() {
+        return this._enabled;
+    }
+
+    _addModel(model) {
+        const modelInfo = {
+            model: model,
+            onDestroyed: model.on("destroyed", () => {
+                this._removeModel(model);
+            })
+        };
+        this._modelInfos[model.id] = modelInfo;
+        this._kdTreeDirty = true;
+    }
+
+    _removeModel(model) {
+        const modelInfo = this._modelInfos[model.id];
+        if (modelInfo) {
+            modelInfo.model.off(modelInfo.onDestroyed);
+            delete this._modelInfos[model.id];
+            this._kdTreeDirty = true;
+        }
+    }
+
+    _doCull() {
+        const cullDirty = (this._frustumDirty || this._kdTreeDirty);
+        if (this._frustumDirty) {
+            this._buildFrustum();
+        }
+        if (this._kdTreeDirty) {
+            this._buildKDTree();
+        }
+        if (cullDirty) {
+            const kdNode = this._kdRoot;
+            if (kdNode) {
+                this._visitKDNode(kdNode);
+            }
+        }
+    }
+
+    _buildFrustum() {
+        const camera = this.viewer.scene.camera;
+        setFrustum(this._frustum, camera.viewMatrix, camera.projMatrix);
+        this._frustumDirty = false;
+    }
+
+    _buildKDTree() {
+        const viewer = this.viewer;
+        const scene = viewer.scene;
+        const depth = 0;
+        if (this._kdRoot) ;
+        this._kdRoot = {
+            aabb: scene.getAABB(),
+            intersection: Frustum.INTERSECT
+        };
+        for (let objectIdx = 0, len = this._objectCullStates.numObjects; objectIdx < len; objectIdx++) {
+            const entity = this._objectCullStates.objects[objectIdx];
+            this._insertEntityIntoKDTree(this._kdRoot, entity, objectIdx, depth + 1);
+        }
+        this._kdTreeDirty = false;
+    }
+
+    _insertEntityIntoKDTree(kdNode, entity, objectIdx, depth) {
+
+        const entityAABB = entity.aabb;
+
+        if (depth >= this._maxTreeDepth) {
+            kdNode.objects = kdNode.objects || [];
+            kdNode.objects.push(objectIdx);
+            math.expandAABB3(kdNode.aabb, entityAABB);
+            return;
+        }
+
+        if (kdNode.left) {
+            if (math.containsAABB3(kdNode.left.aabb, entityAABB)) {
+                this._insertEntityIntoKDTree(kdNode.left, entity, objectIdx, depth + 1);
+                return;
+            }
+        }
+
+        if (kdNode.right) {
+            if (math.containsAABB3(kdNode.right.aabb, entityAABB)) {
+                this._insertEntityIntoKDTree(kdNode.right, entity, objectIdx, depth + 1);
+                return;
+            }
+        }
+
+        const nodeAABB = kdNode.aabb;
+
+        kdTreeDimLength[0] = nodeAABB[3] - nodeAABB[0];
+        kdTreeDimLength[1] = nodeAABB[4] - nodeAABB[1];
+        kdTreeDimLength[2] = nodeAABB[5] - nodeAABB[2];
+
+        let dim = 0;
+
+        if (kdTreeDimLength[1] > kdTreeDimLength[dim]) {
+            dim = 1;
+        }
+
+        if (kdTreeDimLength[2] > kdTreeDimLength[dim]) {
+            dim = 2;
+        }
+
+        if (!kdNode.left) {
+            const aabbLeft = nodeAABB.slice();
+            aabbLeft[dim + 3] = ((nodeAABB[dim] + nodeAABB[dim + 3]) / 2.0);
+            kdNode.left = {
+                aabb: aabbLeft,
+                intersection: Frustum.INTERSECT
+            };
+            if (math.containsAABB3(aabbLeft, entityAABB)) {
+                this._insertEntityIntoKDTree(kdNode.left, entity, objectIdx, depth + 1);
+                return;
+            }
+        }
+
+        if (!kdNode.right) {
+            const aabbRight = nodeAABB.slice();
+            aabbRight[dim] = ((nodeAABB[dim] + nodeAABB[dim + 3]) / 2.0);
+            kdNode.right = {
+                aabb: aabbRight,
+                intersection: Frustum.INTERSECT
+            };
+            if (math.containsAABB3(aabbRight, entityAABB)) {
+                this._insertEntityIntoKDTree(kdNode.right, entity, objectIdx, depth + 1);
+                return;
+            }
+        }
+
+        kdNode.objects = kdNode.objects || [];
+        kdNode.objects.push(objectIdx);
+
+        math.expandAABB3(kdNode.aabb, entityAABB);
+    }
+
+    _visitKDNode(kdNode, intersects = Frustum.INTERSECT) {
+        if (intersects !== Frustum.INTERSECT && kdNode.intersects === intersects) {
+            return;
+        }
+        if (intersects === Frustum.INTERSECT) {
+            intersects = frustumIntersectsAABB3(this._frustum, kdNode.aabb);
+            kdNode.intersects = intersects;
+        }
+        const culled = (intersects === Frustum.OUTSIDE);
+        const objects = kdNode.objects;
+        if (objects && objects.length > 0) {
+            for (let i = 0, len = objects.length; i < len; i++) {
+                const objectIdx = objects[i];
+                this._objectCullStates.setObjectViewCulled(objectIdx, culled);
+            }
+        }
+        if (kdNode.left) {
+            this._visitKDNode(kdNode.left, intersects);
+        }
+        if (kdNode.right) {
+            this._visitKDNode(kdNode.right, intersects);
+        }
+    }
+
+    /**
+     * @private
+     */
+    send(name, value) {
+    }
+
+    /**
+     * Destroys this ViewCullPlugin.
+     */
+    destroy() {
+        super.destroy();
+        this._clear();
+        const scene = this.viewer.scene;
+        const camera = scene.camera;
+        scene.off(this._onModelLoaded);
+        scene.off(this._onSceneTick);
+        camera.off(this._onViewMatrix);
+        camera.off(this._onProjMatrix);
+    }
+
+    _clear() {
+        for (let modelId in this._modelInfos) {
+            const modelInfo = this._modelInfos[modelId];
+            modelInfo.model.off(modelInfo.onDestroyed);
+        }
+        this._modelInfos = {};
+        this._kdRoot = null;
+        this._kdTreeDirty = true;
+    }
+}
 
 /**
  * Default data access strategy for {@link XKTLoaderPlugin}.
@@ -100105,6 +101126,82 @@ class Viewer {
     }
 }
 
+/**
+ * Manages global configurations for all {@link Viewer}s.
+ *
+ * ## Example
+ *
+ * In the example below, we'll disable xeokit's double-precision support, which gives a performance and memory boost
+ * on low-power devices, but also means that we can no longer render double-precision models without jittering.
+ *
+ * That's OK if we know that we're not going to view models that are geographically vast, or offset far from the World coordinate origin.
+ *
+ * [[Run this example](http://xeokit.github.io/xeokit-sdk/examples/#Configs_disableDoublePrecisionAndRAF)]
+ *
+ * ````javascript
+ * import {Configs, Viewer, XKTLoaderPlugin} from "../dist/xeokit-sdk.es.js";
+ *
+ * // Access xeoit-sdk global configs.
+ * // We typically set configs only before we create any Viewers.
+ * const configs = new Configs();
+ *
+ * // Disable 64-bit precision for extra speed.
+ * // Only set this config once, before you create any Viewers.
+ * configs.doublePrecisionEnabled = false;
+ *
+ * // Create a Viewer, to which our configs apply
+ * const viewer = new Viewer({
+ *      canvasId: "myCanvas"
+ *  });
+ *
+ * viewer.camera.eye = [-3.933, 2.855, 27.018];
+ * viewer.camera.look = [4.400, 3.724, 8.899];
+ * viewer.camera.up = [-0.018, 0.999, 0.039];
+ *
+ * const xktLoader = new XKTLoaderPlugin(viewer);
+ *
+ * const model = xktLoader.load({
+ *     src: "../assets/models/xkt/v8/ifc/Duplex.ifc.xkt"
+ * });
+ * ````
+ */
+class Configs {
+
+    /**
+     * Creates a Configs.
+     */
+    constructor() {
+
+    }
+
+    /**
+     * Sets whether double precision mode is enabled for Viewers.
+     *
+     * When double precision mode is enabled (default), Viewers will accurately render models that contain
+     * double-precision coordinates, without jittering.
+     *
+     * Internally, double precision incurs extra performance and memory overhead, so if we're certain that
+     * we're not going to render models that rely on double-precision coordinates, then it's a good idea to disable
+     * it, especially on low-power devices.
+     *
+     * This should only be set once, before creating any Viewers.
+     *
+     * @returns {boolean}
+     */
+    set doublePrecisionEnabled(doublePrecision) {
+        math.setDoublePrecisionEnabled(doublePrecision);
+    }
+
+    /**
+     * Gets whether double precision mode is enabled for all Viewers.
+     *
+     * @returns {boolean}
+     */
+    get doublePrecisionEnabled() {
+        return math.getDoublePrecisionEnabled();
+    }
+}
+
 math.vec2();
 math.vec3();
 math.vec3();
@@ -100115,6 +101212,8 @@ math.vec3();
 const isBim3DModel = document.getElementById("isBim3DModel");
 
 if (isBim3DModel) {
+    const config = new Configs();
+    config.doublePrecisionEnabled = false;
     const canvas = document.getElementById("3dmodel-canvas");
     canvas.style.position = "absolute";
     canvas.style.height = window.innerHeight - 200 + "px";
@@ -100136,6 +101235,22 @@ if (isBim3DModel) {
         id: fileName,
         src: fileUrl,
         edges: true,
+    });
+
+    new FastNavPlugin(viewer, {
+        hideEdges: true,
+        hideSAO: true,
+        hideColorTexture: true,
+        hidePBR: true,
+        hideTransparentObjects: false,
+        scaleCanvasResolution: true,
+        scaleCanvasResolutionFactor: 0.5,
+        delayBeforeRestore: true,
+        delayBeforeRestoreSeconds: 0.4
+    });
+
+    new ViewCullPlugin(viewer,{
+        maxTreeDepth: 20,
     });
 
     model.on("loaded", () => {
@@ -100291,7 +101406,12 @@ if (isBim3DModel) {
             }
         }
     });
-
+    viewer.cameraControl.on("hoverOff", (e) => {
+        if (lastEntity){
+            lastEntity.highlighted = false;
+            lastEntity = null;
+        }
+    });
 
 
     window.onresize = () => {

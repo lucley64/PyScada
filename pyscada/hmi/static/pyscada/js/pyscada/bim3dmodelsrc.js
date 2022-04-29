@@ -1,9 +1,22 @@
 /*jshint esversion: 6*/
-import { ContextMenu, math, NavCubePlugin, SectionPlanesPlugin, TreeViewPlugin, Viewer, XKTLoaderPlugin } from "@xeokit/xeokit-sdk";
+import { 
+    Configs, 
+    ContextMenu, 
+    FastNavPlugin, 
+    math, 
+    NavCubePlugin, 
+    SectionPlanesPlugin, 
+    TreeViewPlugin, 
+    ViewCullPlugin, 
+    Viewer, 
+    XKTLoaderPlugin
+} from "@xeokit/xeokit-sdk";
 
 const isBim3DModel = document.getElementById("isBim3DModel");
 
 if (isBim3DModel) {
+    const config = new Configs();
+    config.doublePrecisionEnabled = false;
     const canvas = document.getElementById("3dmodel-canvas");
     canvas.style.position = "absolute";
     canvas.style.height = window.innerHeight - 200 + "px";
@@ -25,6 +38,22 @@ if (isBim3DModel) {
         id: fileName,
         src: fileUrl,
         edges: true,
+    });
+
+    const fastNavPlugin = new FastNavPlugin(viewer, {
+        hideEdges: true,
+        hideSAO: true,
+        hideColorTexture: true,
+        hidePBR: true,
+        hideTransparentObjects: false,
+        scaleCanvasResolution: true,
+        scaleCanvasResolutionFactor: 0.5,
+        delayBeforeRestore: true,
+        delayBeforeRestoreSeconds: 0.4
+    });
+
+    const viewCullPlugin = new ViewCullPlugin(viewer,{
+        maxTreeDepth: 20,
     });
 
     model.on("loaded", () => {
@@ -180,7 +209,12 @@ if (isBim3DModel) {
             }
         }
     });
-
+    viewer.cameraControl.on("hoverOff", (e) => {
+        if (lastEntity){
+            lastEntity.highlighted = false;
+            lastEntity = null;
+        }
+    });
 
 
     window.onresize = () => {
