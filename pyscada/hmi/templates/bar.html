@@ -1,7 +1,10 @@
-<div class="widget-body" id="widget-body-{{ widget_pk }}-barApexCharts-{{-barApexCharts-.pk}}">
+<script src="{{bar.library.link}}"></script>
+
+<div class="widget-body" id="widget-body-{{ widget_pk }}-bar-{{-bar-.pk}}">
     <div class="main-chart-area" style="height:450px; width:100%;">
-        <div id="chart-container-{{ widget_pk }}-{{-barApexCharts-.pk}}" class="bar-container" style="width: 100%; height:100%;">
-            <div class="chartTitle">{{barApexCharts.title}}</div>
+        <div id="chart-container-{{ widget_pk }}-{{-bar-.pk}}" class="bar-container" style="width: 100%; height:100%;"
+        data-values='{{bar.values}}' data-min='{{bar.xMin}}' data-max='{{bar.xMax}}'>
+            <div class="chartTitle">{{bar.title}}</div>
             <div class="chart-placeholder"></div>
         </div>
     </div>

@@ -425,6 +425,19 @@ class Bar(WidgetContentModel):
                 list.append(item)
         return list
 
+    def values(self):
+        allValues = []
+        for xVariable in self.variables:
+            for xValue in xVariable:
+                allValues.append(xValue)
+        return allValues
+
+    def xMin(self):
+        return min(self.values(self))
+
+    def xMax(self):
+        return max(self.values(self))
+
     def gen_html(self, **kwargs):
         """
 

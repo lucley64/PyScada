@@ -73,6 +73,7 @@ var INIT_CHART_VARIABLES_DONE = false;
 var CHART_VARIABLE_KEYS = {count:function(){var c = 0;for (var key in this){c++;} return c-2;},keys:function(){var k = [];for (var key in this){if (key !=="keys" && key !=="count"){k.push(key);}} return k;}};
 
 // Plot :
+var PyScadaApex = []
 var PyScadaPlots = [];
 var progressbar_resize_active = false;
 var UPDATE_X_AXES_TIME_LINE_STATUS = true;
@@ -1781,6 +1782,47 @@ function Gauge(id, min_value, max_value, threshold_values){
         }
     }
 }
+// Bar
+function Bar(id, min, max, xValues){
+    var options = {
+        series: [{
+        data: [min,min*1.2,min*1.4,min*1.6,min*1.8,max]
+      }],
+        chart: {
+        height: 350,
+        type: 'bar',
+        events: {
+          click: function(chart, w, e) {
+            // console.log(chart, w, e)
+          }
+        }
+      },
+      colors: colors,
+      plotOptions: {
+        bar: {
+          columnWidth: '45%',
+          distributed: true,
+        }
+      },
+      dataLabels: {
+        enabled: false
+      },
+      legend: {
+        show: false
+      },
+      xaxis: {
+        categories: [xValues],
+        labels: {
+          style: {
+            colors: colors,
+            fontSize: '12px'
+          }
+        }
+      }
+      };
+
+      bar_container_id = '#bar-container-'+id;
+}
 // Pie
 function Pie(id, radius, innerRadius){
     var options = {
@@ -3085,6 +3127,19 @@ $( document ).ready(function() {
     set_loading_state(1, loading_states[1] + 10);
 
     // init
+    $.each($('.bar-container'),function(key,val){
+        // get identifier of the chart
+        id = val.id.substring(16);
+        min = $(val).data('min');
+        max = $(val).data('max');
+        if ( min === null ) {min = 0;}
+        if ( max === null ) {max = 100;}
+
+        values = JSON.parse($(val).data('values'));
+        // add a new Plot
+        var barApex = new Bar(id, min, max, values);
+        PyScadaApex.push(new ApexCharts(barApex.bar_container_id,barApex.options));
+    });
     $.each($('.chart-container'),function(key,val){
         // get identifier of the chart
         id = val.id.substring(16);
@@ -3234,6 +3289,12 @@ $( document ).ready(function() {
       $.each(PyScadaPlots,function(plot_id){
             var self = this, doBind = function() {
                 PyScadaPlots[plot_id].resize();
+            };
+            $.browserQueue.add(doBind, this);
+        });
+        $.each(PyScadaApex,function(apex_id){
+            var self = this, doBind = function() {
+                PyScadaApex[apex_id].render();
             };
             $.browserQueue.add(doBind, this);
         });
