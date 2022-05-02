@@ -61,18 +61,6 @@ except (TimeoutError, asyncioTimeoutError):
     channels_driver = True
 
 #
-# Libraries
-#
-class ChartLibrarie(models.Model):
-    id = models.AutoField(primary_key=True)
-    title = models.CharField(max_length=400, default='')
-    link = models.CharField(max_length=400, default='')
-
-    def __str__(self) :
-        return self.title
-
-
-#
 # Manager
 #
 class RecordedDataValueManager(models.Manager):
