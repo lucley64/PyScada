@@ -678,11 +678,19 @@ class IfcClass(models.Model):
 class Bim3DModel(WidgetContentModel):
     id = models.AutoField(primary_key=True)
     title = models.CharField(max_length=400, default='')
-    file = models.FileField(upload_to='', default='')
-    classes = models.ManyToManyField(IfcClass)
+    file = models.FileField(upload_to='', default='', help_text="only accept .xkt format for now see below")
+    classes = models.ManyToManyField(IfcClass, blank=True)
 
     def __str__(self):
         return str(self.id) + ': ' + self.title
+
+    def save(self, *args, **kwargs):
+        try:
+            this = Bim3DModel.objects.get(id = self.id)
+            if this.file != self.file:
+                this.file.delete()
+        except:pass
+        super(Bim3DModel, self).save(args, kwargs)
 
     def gen_html(self, **kwargs):
         """
