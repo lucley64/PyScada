@@ -6,7 +6,7 @@ from pyscada.admin import admin_site
 
 from pyscada.models import Variable
 from pyscada.models import Color
-from pyscada.hmi.models import ControlItem, Bim3DModel, IfcClass
+from pyscada.hmi.models import ControlItem
 from pyscada.hmi.models import Chart, ChartAxis
 from pyscada.hmi.models import Form
 from pyscada.hmi.models import SlidingPanelMenu
@@ -260,13 +260,6 @@ class ProcessFlowDiagramAdmin(admin.ModelAdmin):
     save_as = True
     save_as_continue = True
 
-class Bim3DModelAdmin(admin.ModelAdmin):
-    list_display = ('id', 'title',)
-    list_editable = ('title',)
-    save_as = True
-    save_as_continue = True
-    change_form_template = 'admin/changeBimModelTemplate.html'
-
 
 
 admin_site.register(ControlItem, ControlItemAdmin)
@@ -275,7 +268,6 @@ admin_site.register(Pie, PieAdmin)
 admin_site.register(Form, FormAdmin)
 admin_site.register(SlidingPanelMenu, SlidingPanelMenuAdmin)
 admin_site.register(Page, PageAdmin)
-admin_site.register(Bim3DModel, Bim3DModelAdmin)
 admin_site.register(GroupDisplayPermission, GroupDisplayPermissionAdmin)
 admin_site.register(DisplayValueOption, DisplayValueOptionAdmin)
 admin_site.register(ControlElementOption, ControlElementOptionAdmin)
@@ -285,4 +277,3 @@ admin_site.register(Widget, WidgetAdmin)
 admin_site.register(View, ViewAdmin)
 admin_site.register(ProcessFlowDiagram, ProcessFlowDiagramAdmin)
 admin_site.register(ProcessFlowDiagramItem, ProcessFlowDiagramItemAdmin)
-admin_site.register(IfcClass)
