@@ -22,11 +22,14 @@
             </thead>
             <tbody>
 
+            {% if not chart_legend_html %}
+                chart_legend_html = "_chart_legend.html"
+            {% endif %}
             {% for axe in chart.chartaxis_set.all|dictsort:"id" %}
-                {% include "_chart_legend.html" with axe=axe %}
+                {% include chart_legend_html with axe=axe %}
             {% endfor %}
             {% if pie %}
-                {% include "_chart_legend.html" with axe=chart %}
+                {% include chart_legend_html with axe=chart %}
             {% endif %}
             </tbody>
         </table>

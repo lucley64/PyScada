@@ -128,7 +128,11 @@ var VARIABLE_PROPERTIES_LAST_MODIFIED = {};
 
 // Add Data
 function add_fetched_data(key,value){
+
+    // CHECK THE INPUT 'value' :
+
     if (typeof(value)==="object"){
+        // check if there is values
         if (value.length >0){
             if (typeof(CHART_VARIABLE_KEYS[key]) === 'undefined'){
                 // no history needed
@@ -138,13 +142,18 @@ function add_fetched_data(key,value){
                     UPDATE_X_AXES_TIME_LINE_STATUS = true;
                 }
             }else {
+                // if the input data is not stored, we save it
                 if (typeof(DATA[key]) == "undefined"){
                     DATA[key] = value;
                 } else {
+                    // Min and Max of 'value' and DATA
                     var v_t_min = value[0][0];
                     var v_t_max = value[value.length-1][0];
                     var d_t_min = DATA[key][0][0];
                     var d_t_max = DATA[key][DATA[key].length-1][0];
+
+
+                    // CHECKING 'value' and 'DATA' :
 
                     if (v_t_min > d_t_max){
                         // append, most likely
@@ -158,6 +167,9 @@ function add_fetched_data(key,value){
                     } else if (v_t_max == d_t_min){
                         // prepend, drop last element of value
                         DATA[key] = value.slice(0,value.length-1).concat(DATA[key]);
+
+
+                    // data and value overlapping, value has older and newer elements than data, prepend and append
                     } else if (v_t_max > d_t_max && v_t_min < d_t_min){
                         // data and value overlapping, value has older and newer elements than data, prepend and append
                         start_id = find_index_sub_lte(value,DATA[key][0][0],0);
@@ -172,7 +184,10 @@ function add_fetched_data(key,value){
                         }else{
                             console.log(key + ' : dropped data');
                         }
-                    } else if (v_t_max > d_t_min && v_t_min < d_t_min){
+                    } 
+
+                    // data and value overlapping, data has older elements than value, append
+                    else if (v_t_max > d_t_min && v_t_min < d_t_min){
                         // data and value overlapping, value has older elements than data, prepend
                         stop_id = find_index_sub_lte(value,DATA[key][0][0],0);
                         if (typeof(stop_id) === "number" ){
@@ -192,6 +207,8 @@ function add_fetched_data(key,value){
                         //console.log(key + ' : no new data');
                     }
                 }
+
+                // update x axes
                 if (value[0][0] < DATA_FROM_TIMESTAMP){
                     //DATA_FROM_TIMESTAMP = value[0][0];
                     UPDATE_X_AXES_TIME_LINE_STATUS = true;
@@ -252,12 +269,12 @@ function msToTime(duration) {
 function dictionary(id,val){
     if ($(".variable-config[data-dictionary][data-id=" + id + "]").attr('data-dictionary')){
         // apply dictionary
-        t = JSON.parse($(".variable-config[data-dictionary][data-id=" + id + "]").attr('data-dictionary'))
+        t = JSON.parse($(".variable-config[data-dictionary][data-id=" + id + "]").attr('data-dictionary'));
         if (val in t) {
-            val = t[val]
+            val = t[val];
         }else if (parseFloat(val).toFixed(1) in t) {
             //int stored as a float
-            val = t[parseFloat(val).toFixed(1)]
+            val = t[parseFloat(val).toFixed(1)];
         }
     }
     return val;
@@ -266,84 +283,90 @@ function dictionary(id,val){
 
 // UPDATE DATA COLORS :
 function update_data_colors(id,val){
-    color_type = $(".variable-config[data-color-type][data-id=" + id + "]").attr('data-color-type')
-    color_mode = $(".variable-config[data-color-mode][data-id=" + id + "]").attr('data-color-mode')
-    color_level_1_type = $(".variable-config[data-level-1-type][data-id=" + id + "]").attr('data-level-1-type')
-    color_level_2_type = $(".variable-config[data-level-2-type][data-id=" + id + "]").attr('data-level-2-type')
-    color_level_1 = $(".variable-config[data-level-1][data-id=" + id + "]").attr('data-level-1')
-    color_level_2 = $(".variable-config[data-level-2][data-id=" + id + "]").attr('data-level-2')
-    color_1 = $(".variable-config[data-color-1][data-id=" + id + "]").attr('data-color-1')
-    color_2 = $(".variable-config[data-color-2][data-id=" + id + "]").attr('data-color-2')
-    color_3 = $(".variable-config[data-color-3][data-id=" + id + "]").attr('data-color-3')
+    // variable colors
+    color_type = $(".variable-config[data-color-type][data-id=" + id + "]").attr('data-color-type');
+    color_mode = $(".variable-config[data-color-mode][data-id=" + id + "]").attr('data-color-mode');
+    color_level_1_type = $(".variable-config[data-level-1-type][data-id=" + id + "]").attr('data-level-1-type');
+    color_level_2_type = $(".variable-config[data-level-2-type][data-id=" + id + "]").attr('data-level-2-type');
+    color_level_1 = $(".variable-config[data-level-1][data-id=" + id + "]").attr('data-level-1');
+    color_level_2 = $(".variable-config[data-level-2][data-id=" + id + "]").attr('data-level-2');
+    color_1 = $(".variable-config[data-color-1][data-id=" + id + "]").attr('data-color-1');
+    color_2 = $(".variable-config[data-color-2][data-id=" + id + "]").attr('data-color-2');
+    color_3 = $(".variable-config[data-color-3][data-id=" + id + "]").attr('data-color-3');
 
     if ($(".variable-config[data-value-class][data-id=" + id + "]").attr('data-value-class') == 'BOOLEAN') {
-        color_type = 1
-        color_level_1 = 1
-        color_level_1_type = 1
-        if (val == false) { val = 0 } else if ( val == true ) { val = 1 }
+        color_type = 1;
+        color_level_1 = 1;
+        color_level_1_type = 1;
+        if (val == false) { val = 0 ;} else if ( val == true ) { val = 1 ;}
     }
 
-    color = null
+    color = null;
 
-    if (color_type == 1) {
+    // COLOR TYPE :
+    switch(color_type){
+        case 1 : 
         if (color_level_1_type == 0) {
             if (val <= color_level_1) {
-                color = color_1
+                color = color_1;
             }else {
-                color = color_2
+                color = color_2;
             }
         }else if (color_level_1_type == 1) {
             if (val < color_level_1) {
-                color = color_1
+                color = color_1;
             }else {
-                color = color_2
+                color = color_2;
             }
         }
-    }else if (color_type == 2) {
-        if (color_level_1_type == 0) {
+        break;
+
+        case 2:
+            if (color_level_1_type == 0) {
+                if (val <= color_level_1) {
+                    color = color_1;
+                }else {
+                    color = color_2;
+                }
+            }else if (color_level_1_type == 1) {
+                if (val < color_level_1) {
+                    color = color_1;
+                }else {
+                    color = color_2;
+                }
+            }
+            break;
+
+        case 3:
             if (val <= color_level_1) {
-                color = color_1
-            }else if (color_level_2_type == 0) {
-                if (val <= color_level_2) {
-                    color = color_2
-                }else {
-                    color = color_3
-                }
+                color = color_1;
+            }else if (val >= color_level_2) {
+                color = color_2;
             }else {
-                if (val < color_level_2) {
-                    color = color_2
-                }else {
-                    color = color_3
-                }
+                fade = (val-color_level_1)/(color_level_2-color_level_1);
+                color_1_new = new Color(color_1.match(/\d+/g)[0],color_1.match(/\d+/g)[1],color_1.match(/\d+/g)[2]);
+                color_2_new = new Color(color_2.match(/\d+/g)[0],color_2.match(/\d+/g)[1],color_2.match(/\d+/g)[2]);
+                color = colorGradient(fade, color_1_new, color_2_new);
             }
-        }else if (color_level_1_type == 1) {
+            break;
+
+        default: 
             if (val < color_level_1) {
-                color = color_1
+                color = color_1;
             }else if (color_level_2_type == 0) {
                 if (val <= color_level_2) {
-                    color = color_2
+                    color = color_2;
                 }else {
-                    color = color_3
+                    color = color_3;
                 }
             }else {
                 if (val < color_level_2) {
-                    color = color_2
+                    color = color_2;
                 }else {
-                    color = color_3
+                    color = color_3;
                 }
             }
-        }
-    }else if (color_type == 3) {
-        if (val <= color_level_1) {
-            color = color_1
-        }else if (val >= color_level_2) {
-            color = color_2
-        }else {
-            fade = (val-color_level_1)/(color_level_2-color_level_1);
-            color_1_new = new Color(color_1.match(/\d+/g)[0],color_1.match(/\d+/g)[1],color_1.match(/\d+/g)[2])
-            color_2_new = new Color(color_2.match(/\d+/g)[0],color_2.match(/\d+/g)[1],color_2.match(/\d+/g)[2])
-            color = colorGradient(fade, color_1_new, color_2_new)
-        }
+            break;
     }
 
     //console.log(id + " " + color_mode + " " + color_type + " " + color);
@@ -357,24 +380,30 @@ function update_data_colors(id,val){
 
 // Update Data
 function update_data_values(key,val,time){
-    if (key.split("-")[0] == "var") {type="variable"} else {type="variable_property"}
 
+    // CHECKING 'key' TYPE :
+    if (key.split("-")[0] == "var") {type="variable";} else {type="variable_property";}
+
+    // TIME UPDATE :
     if (time != null) {
-        t_last_update = SERVER_TIME - time
+        t_last_update = SERVER_TIME - time;
         t_next_update = 1000 * $(".variable-config[data-value-timestamp][data-key=" + key.split("-")[1] + "][data-type=" + type + "]").attr('data-device-polling_interval') - t_last_update;
         t_next_update_string = ((t_next_update < 1000) ? '< 1 sec' : msToTime(t_next_update));
-        $(".type-numeric." + key).attr('data-original-title','last update ' + msToTime(t_last_update) + ' ago<br>next update in ' + t_next_update_string)
-        $(".variable-config[data-value-timestamp][data-key=" + key.split("-")[1] + "][data-type=" + type + "]").attr('data-value-timestamp',time)
-        polling_interval = $(".variable-config[data-device-polling_interval][data-key=" + key.split("-")[1] + "]").attr('data-device-polling_interval')
+        
+        $(".type-numeric." + key).attr('data-original-title','last update ' + msToTime(t_last_update) + ' ago<br>next update in ' + t_next_update_string);
+        $(".variable-config[data-value-timestamp][data-key=" + key.split("-")[1] + "][data-type=" + type + "]").attr('data-value-timestamp',time);
+        
+        polling_interval = $(".variable-config[data-device-polling_interval][data-key=" + key.split("-")[1] + "]").attr('data-device-polling_interval');
+        
         if (time < SERVER_TIME - 10 * Math.max(1000 * polling_interval, REFRESH_RATE)) {
-            $(".type-numeric." + key).parent().find('.glyphicon-alert').removeClass("hidden")
-            $(".type-numeric." + key).parent().find('.glyphicon-exclamation-sign').addClass("hidden")
+            $(".type-numeric." + key).parent().find('.glyphicon-alert').removeClass("hidden");
+            $(".type-numeric." + key).parent().find('.glyphicon-exclamation-sign').addClass("hidden");
         }else if (time < SERVER_TIME - 3 * Math.max(1000 * polling_interval, REFRESH_RATE)) {
-            $(".type-numeric." + key).parent().find('.glyphicon-alert').addClass("hidden")
-            $(".type-numeric." + key).parent().find('.glyphicon-exclamation-sign').removeClass("hidden")
+            $(".type-numeric." + key).parent().find('.glyphicon-alert').addClass("hidden");
+            $(".type-numeric." + key).parent().find('.glyphicon-exclamation-sign').removeClass("hidden");
         }else {
-            $(".type-numeric." + key).parent().find('.glyphicon-alert').addClass("hidden")
-            $(".type-numeric." + key).parent().find('.glyphicon-exclamation-sign').addClass("hidden")
+            $(".type-numeric." + key).parent().find('.glyphicon-alert').addClass("hidden");
+            $(".type-numeric." + key).parent().find('.glyphicon-exclamation-sign').addClass("hidden");
         }
     }
 
@@ -382,8 +411,15 @@ function update_data_values(key,val,time){
         return;
     }
 
+
+    // TYPE OF 'val' :
+    // NUMBER :
+
     if (typeof(val)==="number"){
+
         var r_val = Number(val);
+
+        // adjusting r_val
         if(Math.abs(r_val) == 0 ){
             r_val = 0;
         }else if(Math.abs(r_val) < 0.001) {
@@ -399,10 +435,12 @@ function update_data_values(key,val,time){
         }else{
             r_val = r_val.toPrecision(4);
         }
+
+        // colors
         for (i = 0; i < $(".control-item.type-numeric." + key).length; ++i) {
-            color_mode = $(".variable-config[data-color-mode][data-id=" + $(".control-item.type-numeric." + key)[i].id + "]").attr('data-color-mode')
+            color_mode = $(".variable-config[data-color-mode][data-id=" + $(".control-item.type-numeric." + key)[i].id + "]").attr('data-color-mode');
             if (color_mode != 1 ) {
-                r_val_temp = r_val
+                r_val_temp = r_val;
                 if (typeof $(".variable-config[data-timestamp-conversion][data-id=" + $(".control-item.type-numeric." + key)[i].id + "]").attr('data-timestamp-conversion') != 'undefined' && $(".variable-config[data-timestamp-conversion][data-id=" + $(".control-item.type-numeric." + key)[i].id + "]").attr('data-timestamp-conversion') != 0){
                     r_val_temp=timestamp_conversion($(".control-item.type-numeric." + key)[i].id,val);
                 }else if (typeof $(".variable-config[data-dictionary][data-id=" + $(".control-item.type-numeric." + key)[i].id + "]").attr('data-dictionary') != 'undefined' && $(".variable-config[data-dictionary][data-id=" + $(".control-item.type-numeric." + key)[i].id + "]").attr('data-dictionary') != 0){
@@ -411,18 +449,24 @@ function update_data_values(key,val,time){
                 $("#" + $(".control-item.type-numeric." + key)[i].id).html(r_val_temp + " " + $(".variable-config[data-unit][data-key=" + key.split("-")[1] + "]").attr('data-unit'));
             }
             if ($(".variable-config[data-color-type][data-id=" + $(".control-item.type-numeric." + key)[i].id + "]").attr('data-color-type') != 0 && $(".variable-config[data-color-mode][data-id=" + $(".control-item.type-numeric." + key)[i].id + "]").attr('data-color-mode') != 0){
-                $($(".control-item.type-numeric." + key)[i]).css("background-color", update_data_colors($(".control-item.type-numeric." + key)[i].id,val))
+                $($(".control-item.type-numeric." + key)[i]).css("background-color", update_data_colors($(".control-item.type-numeric." + key)[i].id,val));
             }
         }
+        // timestamps
         if (DATA_DISPLAY_FROM_TIMESTAMP > 0 && time < DATA_DISPLAY_FROM_TIMESTAMP) {
         }else if (DATA_DISPLAY_TO_TIMESTAMP > 0 && time > DATA_DISPLAY_TO_TIMESTAMP) {
         }else if (DATA_FROM_TIMESTAMP > 0 && time < DATA_FROM_TIMESTAMP) {
         }else if (DATA_TO_TIMESTAMP > 0 && time > DATA_TO_TIMESTAMP) {
-        }else { $(".legendValue.type-numeric." + key).html(r_val); };
+        }else { 
+            $(".legendValue.type-numeric." + key).html(r_val); 
+        }
+        
         $(".label .type-numeric." + key).html(r_val);
+        
         if ($('input.'+ key).attr("placeholder") == "") {
             $('input.'+ key).attr("placeholder",r_val);
         }
+
         // unixtime
         var date = new Date(val*1000);
         $(".type-numeric.unixtime_local_date_time." + key).html(date.toLocaleString());
@@ -430,6 +474,7 @@ function update_data_values(key,val,time){
         $(".type-numeric.hex_str_full." + key).html(val.toString(16).toUpperCase());
     }
 
+    // BOOLEAN :
     // set value fields
     if (typeof(val)==="boolean"){
         // set button colors
@@ -440,6 +485,7 @@ function update_data_values(key,val,time){
             $(".label.type-bool." + key).removeClass("label-success");
             $(".label.type-bool." + key).removeClass("label-warning");
             $(".label.type-bool." + key).removeClass("label-danger");
+
             // inverted
             $(".label.type-bool.status-red-inv." + key).addClass("label-danger");
             $(".label.type-bool.status-red-inv." + key).removeClass("label-default");
@@ -447,7 +493,9 @@ function update_data_values(key,val,time){
             $('button.btn-success.write-task-btn.' + key).addClass("update-able");
             $('button.update-able.write-task-btn.' + key).addClass("btn-default");
             $('button.update-able.write-task-btn.' + key).removeClass("btn-success");
-            val = 0
+
+            val = 0;
+
             //$(".type-numeric." + key).html(0);
             if ($('input.'+ key).attr("placeholder") == "") {
                 $('input.'+ key).attr("placeholder",0);
@@ -459,48 +507,70 @@ function update_data_values(key,val,time){
             $(".label.type-bool.status-green." + key).addClass("label-success");
             $(".label.type-bool.status-yellow." + key).addClass("label-warning");
             $(".label.type-bool.status-red." + key).addClass("label-danger");
+
             // inverted
             $(".label.type-bool.status-red-inv." + key).removeClass("label-danger");
             $(".label.type-bool.status-red-inv." + key).addClass("label-default");
-            val = 1
+
+            val = 1;
+
             $('button.btn-default.write-task-btn.' + key).addClass("update-able");
             $('button.update-able.write-task-btn.' + key).removeClass("btn-default");
             $('button.update-able.write-task-btn.' + key).addClass("btn-success");
+
             //$(".type-numeric." + key).html(1);
             if ($('input.'+ key).attr("placeholder") == "") {
                 $('input.'+ key).attr("placeholder",1);
             }
         }
+
         $(".label .type-numeric." + key).html(val);
+
+        // timestamps
         if (DATA_DISPLAY_FROM_TIMESTAMP > 0 && time < DATA_DISPLAY_FROM_TIMESTAMP) {
         }else if (DATA_DISPLAY_TO_TIMESTAMP > 0 && time > DATA_DISPLAY_TO_TIMESTAMP) {
         }else if (DATA_FROM_TIMESTAMP > 0 && time < DATA_FROM_TIMESTAMP) {
         }else if (DATA_TO_TIMESTAMP > 0 && time > DATA_TO_TIMESTAMP) {
-        }else { $(".legendValue.type-numeric." + key).html(val); };
+        }else { $(".legendValue.type-numeric." + key).html(val); }
+
+        // colors
         for (i = 0; i < $(".control-item.type-numeric." + key).length; ++i) {
-            color_mode = $(".variable-config[data-color-mode][data-id=" + $(".control-item.type-numeric." + key)[i].id + "]").attr('data-color-mode')
+
+            color_mode = $(".variable-config[data-color-mode][data-id=" + $(".control-item.type-numeric." + key)[i].id + "]").attr('data-color-mode');
+
             if (color_mode != 1 ) {
-                r_val_temp = val
+
+                r_val_temp = val;
+
                 if (typeof($(".variable-config[data-timestamp-conversion][data-id=" + $(".control-item.type-numeric." + key)[i].id + "]").attr('data-timestamp-conversion')) != 'undefined' && $(".variable-config[data-timestamp-conversion][data-id=" + $(".control-item.type-numeric." + key)[i].id + "]").attr('data-timestamp-conversion') != 0){
                     r_val_temp=timestamp_conversion($(".control-item.type-numeric." + key)[i].id,val);
                 }else if (typeof($(".variable-config[data-dictionary][data-id=" + $(".control-item.type-numeric." + key)[i].id + "]").attr('data-dictionary')) == 'string' && $(".variable-config[data-dictionary][data-id=" + $(".control-item.type-numeric." + key)[i].id + "]").attr('data-dictionary') != ""){
                     r_val_temp=dictionary($(".control-item.type-numeric." + key)[i].id,val);
                 }
+
                 $("#" + $(".control-item.type-numeric." + key)[i].id).html(r_val_temp);
+
             }
             if ($(".variable-config[data-color-type][data-id=" + $(".control-item.type-numeric." + key)[i].id + "]").attr('data-color-type') != 0 && $(".variable-config[data-color-mode][data-id=" + $(".control-item.type-numeric." + key)[i].id + "]").attr('data-color-mode') != 0){
                 $("#" + $(".control-item.type-numeric." + key)[i].id).css("background-color", update_data_colors($(".control-item.type-numeric." + key)[i].id,val))
             }
         }
     }
+
+    // OBJECT :
     if (typeof(val)==="object" && val === null){
         $(".type-numeric." + key).html(val);
         if ($('input.'+ key).attr("placeholder") == "") {
             $('input.'+ key).attr("placeholder",val);
         }
     }
+
+    // STRING :
     if (typeof(val)==="string"){
+
         $(".type-numeric." + key).html(val);
+
+        // indicative text
         if ($('input.'+ key).attr("placeholder") == "") {
             $('input.'+ key).attr("placeholder",val);
         }
@@ -573,7 +643,7 @@ function data_handler(){
                             INIT_CHART_VARIABLES_COUNT++;
                             vars.push(key);
                             if (typeof(DATA[key]) == 'object'){
-                                timestamp = Math.max(timestamp,DATA[key][0][0])
+                                timestamp = Math.max(timestamp,DATA[key][0][0]);
                             }
                             if(var_count >= 10){break;}
                        }
@@ -603,10 +673,10 @@ function data_handler(){
     if(!INIT_STATUS_VARIABLES_DONE || !INIT_CHART_VARIABLES_DONE){
         // initialisation is active
         //setTimeout(function() {data_handler();}, REFRESH_RATE/2.0);
-        if (STATUS_VARIABLE_KEYS.count() + CHART_VARIABLE_KEYS.count() == 0 && LOADING_PAGE_DONE == 0) {LOADING_PAGE_DONE = 1;show_page();hide_loading_state();};
+        if (STATUS_VARIABLE_KEYS.count() + CHART_VARIABLE_KEYS.count() == 0 && LOADING_PAGE_DONE == 0) {LOADING_PAGE_DONE = 1;show_page();hide_loading_state();}
         setTimeout(function() {data_handler();}, 100);
     }else{
-        if (LOADING_PAGE_DONE == 0) {LOADING_PAGE_DONE = 1;show_page();hide_loading_state();};
+        if (LOADING_PAGE_DONE == 0) {LOADING_PAGE_DONE = 1;show_page();hide_loading_state();}
         setTimeout(function() {data_handler();}, REFRESH_RATE);
     }
 }
@@ -633,13 +703,17 @@ function data_handler_ajax(init,variable_keys,variable_property_keys,timestamp_f
 
 // Data Handler Done - Update DATA and Charts
 function data_handler_done(fetched_data){
+
     update_charts = true;
+
+    // checking 'fectched_data' type
     if (typeof(fetched_data['timestamp'])==="number"){
         timestamp = fetched_data['timestamp'];
         delete fetched_data['timestamp'];
     }else{
         timestamp = 0;
     }
+
     if (typeof(fetched_data['server_time'])==="number"){
         SERVER_TIME = fetched_data['server_time'];
         delete fetched_data['server_time'];
@@ -648,21 +722,25 @@ function data_handler_done(fetched_data){
     }else{
         SERVER_TIME = 0;
     }
+
     if (typeof(fetched_data['date_saved_max'])==="number"){
         LAST_QUERY_TIME = fetched_data['date_saved_max'];
         delete fetched_data['date_saved_max'];
     }else{
         //LAST_QUERY_TIME = 0;
     }
+
     if (typeof(fetched_data['variable_properties'])==="object"){
         VARIABLE_PROPERTIES_DATA = fetched_data['variable_properties'];
         delete fetched_data['variable_properties'];
         VARIABLE_PROPERTIES_LAST_MODIFIED = fetched_data['variable_properties_last_modified'];
         delete fetched_data['variable_properties_last_modified'];
     }else{
-        VARIABLE_PROPERTIES_DATA = {}
-        VARIABLE_PROPERTIES_LAST_MODIFIED = {}
+        VARIABLE_PROPERTIES_DATA = {};
+        VARIABLE_PROPERTIES_LAST_MODIFIED = {};
     }
+
+    // update data timestamp
     if(DATA_TO_TIMESTAMP==0){
         //DATA_TO_TIMESTAMP = DATA_FROM_TIMESTAMP = SERVER_TIME;
         DATA_TO_TIMESTAMP = SERVER_TIME;
@@ -688,7 +766,6 @@ function data_handler_done(fetched_data){
                 DATA_DISPLAY_TO_TIMESTAMP = DATA_FROM_TIMESTAMP + DATA_DISPLAY_WINDOW;
             }
             UPDATE_X_AXES_TIME_LINE_STATUS = true;
-
         }
         $.each(PyScadaPlots,function(plot_id){
             var self = this, doBind = function() {
@@ -719,6 +796,8 @@ function data_handler_done(fetched_data){
          */
         // todo
     }
+
+    // update time line
     if (UPDATE_X_AXES_TIME_LINE_STATUS){
         update_timeline();
     }
@@ -744,16 +823,17 @@ function data_handler_fail(x, t, m) {
         //location.reload();
     }
 
+    // error notifications
     if(JSON_ERROR_COUNT % 5 == 0)
         add_notification("Fetching data failed", 3);
 
     JSON_ERROR_COUNT = JSON_ERROR_COUNT + 1;
     if (JSON_ERROR_COUNT > 15) {
-        $("#AutoUpdateStatus").css("color", "red")
+        $("#AutoUpdateStatus").css("color", "red");
         auto_update_click();
         add_notification("Fetching data failed limit reached, auto update deactivated.<br>Check your connectivity and active auto update in the top right corner.", 2, 0);
     } else if(JSON_ERROR_COUNT > 3){
-        $("#AutoUpdateStatus").css("color", "orange")
+        $("#AutoUpdateStatus").css("color", "orange");
         for (var key in VARIABLE_KEYS) {
             key = VARIABLE_KEYS[key];
             //add_fetched_data(key, [[DATA_TO_TIMESTAMP,Number.NaN]]);
@@ -782,7 +862,7 @@ function find_index(a,t){
     var i = a.length; //or 10
     while(i--){
         if (a[i]<=t){
-            return i
+            return i;
         }
     }
 }
@@ -826,7 +906,7 @@ function Color(red,green,blue) {
 
 // CHARTS OBJETCS :
 
-// Plot
+// Plot - a chart with x y axes, with logarithmic mode
 function PyScadaPlot(id, xaxisVarId, xaxisLinLog){
     var options = {
         legend: {
@@ -843,11 +923,11 @@ function PyScadaPlot(id, xaxisVarId, xaxisLinLog){
             },
         },
         xaxis: {
-            mode: (xaxisVarId == null ? "time" : (xaxisLinLog == true ? "log" : null)),
+            mode: (xaxisVarId == null ? "time" : (xaxisLinLog == true ? "log" : null)), // logarithmic mode
             ticks: (xaxisVarId == null ? $('#chart-container-'+id).data('xaxisTicks') : null),
             timeformat: "%d/%m/%Y<br>%H:%M:%S",
             timezone: "browser",
-            timeBase: "milliseconds",
+            timeBase: "milliseconds", // x axis is milliseconds
             autoScale: (xaxisVarId == null ? "none" : "exact"),
             showTickLabels: (xaxisVarId == null ? "major" : "all")
         },
@@ -889,17 +969,22 @@ function PyScadaPlot(id, xaxisVarId, xaxisLinLog){
     series = [],		// just the active data series
     keys   = [],		// list of variable keys (ids)
     variable_names = [], // list of all variable names
+    variables = {},     // list of all variables
     flotPlot,			// handle to plot
-    prepared = false,	//
+    prepared = false,	// is the chart prepared
+
+    // areas in the container
     legend_id = '#chart-legend-' + id,
     legend_table_id = '#chart-legend-table-' + id,
     chart_container_id = '#chart-container-'+id,
     legend_checkbox_id = '#chart-legend-checkbox-' + id + '-',
     legend_checkbox_status_id = '#chart-legend-checkbox-status-' + id + '-',
     legend_value_id = '#chart-legend-value-' + id + '-',
-    variables = {},
+
     axes = {},
     raxes = {},
+
+    // the object
     plot = this;
 
 
@@ -908,6 +993,8 @@ function PyScadaPlot(id, xaxisVarId, xaxisLinLog){
     plot.prepare 			= prepare;
     plot.resize 			= resize;
     plot.updateLegend 		= updateLegend;
+
+    //getter
     plot.getSeries 			= function () { return series };
     plot.getFlotObject		= function () { return flotPlot};
     plot.getKeys			= function (){ return keys};
@@ -916,6 +1003,7 @@ function PyScadaPlot(id, xaxisVarId, xaxisLinLog){
     plot.getInitStatus		= function () { if(InitDone){return InitRetry}else{return false}};
     plot.getId				= function () {return id};
     plot.getChartContainerId= function () {return chart_container_id};
+
     // init data
     tf = function (value, axis) {
         return value.toFixed(axis.tickDecimals) + (((typeof options.yaxes[axis.n-1].unit != "undefined") && options.yaxes[axis.n-1].unit != null) ? options.yaxes[axis.n-1].unit : '');
@@ -969,6 +1057,7 @@ function PyScadaPlot(id, xaxisVarId, xaxisLinLog){
         options.yaxes[raxis_id].axisLabel = options.yaxes[raxis_id].label.replace(/\s/g, '') + (((typeof options.yaxes[raxis_id].unit != "undefined") && options.yaxes[raxis_id].unit != "" && options.yaxes[raxis_id].unit !=  null) ? " (" + options.yaxes[raxis_id].unit + ")" : '');
     });
 
+
     function linearInterpolation (x, x0, y0, x1, y1) {
       var a = (y1 - y0) / (x1 - x0)
       var b = -a * x0 + y0
@@ -1013,12 +1102,16 @@ function PyScadaPlot(id, xaxisVarId, xaxisLinLog){
         }
     }
 
+    // prepare the chart and display it even without data
     function prepare(){
         // prepare legend table sorter
         if (keys.length > 0) {
             $(legend_table_id).tablesorter({sortList: [[2,0]]});
         };
-        // add onchange function to every checkbox in legend
+
+        // CHECKBOX EVENTS :
+
+        // add onchange function to every checkbox in legend / shows or hides the variable linked to the checked/unchecked checkbox
         $.each(variables,function(key,val){
             $(legend_checkbox_id+key).change(function() {
                 plot.update(true);
@@ -1029,7 +1122,7 @@ function PyScadaPlot(id, xaxisVarId, xaxisLinLog){
                 }
             });
         });
-        //
+        // add onchange function to 'make_all_none' checkbox in legend / shows or hides all the variable in the chart
         $(legend_checkbox_id+'make_all_none').change(function() {
             if ($(legend_checkbox_id+'make_all_none').is(':checked')){
                 $.each(variables,function(key,val){
@@ -1044,13 +1137,17 @@ function PyScadaPlot(id, xaxisVarId, xaxisLinLog){
             }
             plot.update(true);
          });
+
+
+        // CORRECTING THE CHART SIZE AND IT'S CONTENTS :
+
         // expand the chart to the maximum width
         main_chart_area  = $(chart_container_id).closest('.main-chart-area');
 
 
         contentAreaHeight = main_chart_area.parent().height();
         mainChartAreaHeight = main_chart_area.height();
-
+        // resize the main chart area if the content height exceed the main chart's
         if (contentAreaHeight>mainChartAreaHeight){
             main_chart_area.height(contentAreaHeight);
         }
@@ -1080,9 +1177,9 @@ function PyScadaPlot(id, xaxisVarId, xaxisLinLog){
                 }
             }
             if (item && typeof item.datapoint != 'undefined' && item.datapoint.length > 1) {
-                opts = item.series.xaxis.options
+                opts = item.series.xaxis.options;
                 if (opts.mode == "time") {
-                    dG = $.plot.dateGenerator(Number(item.datapoint[0].toFixed(0)), opts)
+                    dG = $.plot.dateGenerator(Number(item.datapoint[0].toFixed(0)), opts);
                     dF = $.plot.formatDate(dG, opts.timeformat, opts.monthNames, opts.dayNames);
                     var x = dF,
                         y = item.datapoint[1].toFixed(2);
@@ -1090,8 +1187,8 @@ function PyScadaPlot(id, xaxisVarId, xaxisLinLog){
                     var x = item.datapoint[0].toFixed(2),
                         y = item.datapoint[1].toFixed(2);
                 }
-                y_label = (typeof item.series.label !== 'undefined') ? item.series.label : "T"
-                y_unit = (typeof item.series.unit !== 'undefined') ? item.series.unit : ""
+                y_label = (typeof item.series.label !== 'undefined') ? item.series.label : "T";
+                y_unit = (typeof item.series.unit !== 'undefined') ? item.series.unit : "";
                 $("#tooltip").html(y_label + " (" + x + ") = " + y + " " + y_unit)
                     .css({top: item.pageY+5, left: item.pageX+5, "z-index": 91})
                     .show();
@@ -1099,38 +1196,43 @@ function PyScadaPlot(id, xaxisVarId, xaxisLinLog){
             } else {
                 $("#tooltip").hide();
             }
-
+            // set Crosshairs
             setCrosshairs(flotPlot, id);
-
+        
+        // mouse leave
         }).bind("mouseleave", function (event, pos, item) {
             if(! flotPlot.getOptions().crosshair.locked) {
                 delCrosshairs(flotPlot);
             }
+        // mouse down
         }).bind("mousedown", function (e) {
             var offset = flotPlot.getPlaceholder().offset();
             var plotOffset = flotPlot.getPlotOffset();
             pos={};
             pos.x = clamp(0, e.pageX - offset.left - plotOffset.left, flotPlot.width());
             pos.y = clamp(0, e.pageY - offset.top - plotOffset.top, flotPlot.height());
-			flotPlot.getOptions().crosshair.lastPositionMouseDown = pos
+			flotPlot.getOptions().crosshair.lastPositionMouseDown = pos;
+        // mouse up
 		}).bind("mouseup", function (e) {
 			var offset = flotPlot.getPlaceholder().offset();
             var plotOffset = flotPlot.getPlotOffset();
             pos={};
             pos.x = clamp(0, e.pageX - offset.left - plotOffset.left, flotPlot.width());
             pos.y = clamp(0, e.pageY - offset.top - plotOffset.top, flotPlot.height());
-			old_pos = flotPlot.getOptions().crosshair.lastPositionMouseDown
+			old_pos = flotPlot.getOptions().crosshair.lastPositionMouseDown;
 			if (flotPlot.getOptions().crosshair.locked) {
-			    flotPlot.getOptions().crosshair.lastPosition.x = pos.x
-			    flotPlot.getOptions().crosshair.lastPosition.y = pos.y
+			    flotPlot.getOptions().crosshair.lastPosition.x = pos.x;
+			    flotPlot.getOptions().crosshair.lastPosition.y = pos.y;
 			    unlockCrosshairs(flotPlot);
                 setCrosshairs(flotPlot, id);
 			} else if (pos.x == old_pos.x && pos.y == old_pos.y) {
-                setCrosshairs(flotPlot, id)
+                setCrosshairs(flotPlot, id);
                 lockCrosshairs();
 			}
+        // plot selected
 		}).bind("plotselected", function(event, ranges) {
             pOpt = flotPlot.getOptions();
+            // activate zoom y
             if ($(chart_container_id + " .activate_zoom_y").is(':checked')) {
                 for (range in ranges) {
                     if (~range.indexOf('y')) {
@@ -1149,15 +1251,17 @@ function PyScadaPlot(id, xaxisVarId, xaxisLinLog){
                 flotPlot.setupGrid(true);
                 flotPlot.draw();
             }
+
             flotPlot.clearSelection();
+            // activate zoom x
             if ($(chart_container_id + " .activate_zoom_x").is(':checked') && ranges.xaxis != null) {
                 if (xaxisVarId == null) {
                     DATA_DISPLAY_TO_TIMESTAMP = ((DATA_TO_TIMESTAMP == ranges.xaxis.to) ? DATA_DISPLAY_TO_TIMESTAMP : ranges.xaxis.to);
                     DATA_DISPLAY_FROM_TIMESTAMP = ((DATA_FROM_TIMESTAMP == ranges.xaxis.from) ? DATA_DISPLAY_FROM_TIMESTAMP : ranges.xaxis.from);
-                    if (DATA_DISPLAY_TO_TIMESTAMP < 0 && DATA_DISPLAY_FROM_TIMESTAMP < 0) {DATA_DISPLAY_WINDOW = DATA_TO_TIMESTAMP - DATA_FROM_TIMESTAMP}
-                    else if (DATA_DISPLAY_TO_TIMESTAMP < 0) {DATA_DISPLAY_WINDOW = DATA_TO_TIMESTAMP - DATA_DISPLAY_FROM_TIMESTAMP}
-                    else if (DATA_DISPLAY_FROM_TIMESTAMP < 0) {DATA_DISPLAY_WINDOW = DATA_DISPLAY_TO_TIMESTAMP - DATA_FROM_TIMESTAMP}
-                    else {DATA_DISPLAY_WINDOW = DATA_DISPLAY_TO_TIMESTAMP-DATA_DISPLAY_FROM_TIMESTAMP};
+                    if (DATA_DISPLAY_TO_TIMESTAMP < 0 && DATA_DISPLAY_FROM_TIMESTAMP < 0) {DATA_DISPLAY_WINDOW = DATA_TO_TIMESTAMP - DATA_FROM_TIMESTAMP;}
+                    else if (DATA_DISPLAY_TO_TIMESTAMP < 0) {DATA_DISPLAY_WINDOW = DATA_TO_TIMESTAMP - DATA_DISPLAY_FROM_TIMESTAMP;}
+                    else if (DATA_DISPLAY_FROM_TIMESTAMP < 0) {DATA_DISPLAY_WINDOW = DATA_DISPLAY_TO_TIMESTAMP - DATA_FROM_TIMESTAMP;}
+                    else {DATA_DISPLAY_WINDOW = DATA_DISPLAY_TO_TIMESTAMP-DATA_DISPLAY_FROM_TIMESTAMP;}
                     set_x_axes();
                 }else {
                   pOpt.xaxes[0].min = ranges.xaxis.from;
@@ -1205,8 +1309,8 @@ function PyScadaPlot(id, xaxisVarId, xaxisLinLog){
             } else {
                 location.href = 'data:application/octet-stream,' + encodeURIComponent(content); // only this mime type is supported
             }
-        }
-
+        };
+        // chrt save csv button
         $(chart_container_id + " .btn.btn-default.chart-save-csv").click(function() {
             // Example data given in question text
             var data = [['Label'], ['Unité'], ['Couleur'], ['Données']];
@@ -1235,7 +1339,7 @@ function PyScadaPlot(id, xaxisVarId, xaxisLinLog){
 
             download(csvContent, 'download.csv', 'text/csv;encoding:utf-8');
         });
-
+        // chart save picture button
         $(chart_container_id + " .btn.btn-default.chart-save-picture").click(function() {
             var originalCanvas1 = $(chart_container_id + ' .flot-base')[0]
             var originalCanvas2 = $(chart_container_id + ' .flot-overlay')[0]
@@ -1250,13 +1354,13 @@ function PyScadaPlot(id, xaxisVarId, xaxisLinLog){
             setTimeout(function() {download($('#myCanvas')[0].toDataURL('image/png'), 'image.png', 'image/png');}, 500);
             ctx.fillRect(0, 0, 0, 0);
         });
-
+        // chart reset selection button
         $(chart_container_id + " .btn.btn-default.chart-ResetSelection").click(function() {
             e = jQuery.Event( "click" );
             jQuery(chart_container_id + " .btn.btn-default.chart-ZoomYToFit").trigger(e);
             jQuery(chart_container_id + " .btn.btn-default.chart-ZoomXToFit").trigger(e);
         });
-
+        // chart zoom y to fit button
         $(chart_container_id + " .btn.btn-default.chart-ZoomYToFit").click(function() {
             pOpt = flotPlot.getOptions();
             for (y in pOpt.yaxes){
@@ -1264,12 +1368,12 @@ function PyScadaPlot(id, xaxisVarId, xaxisLinLog){
             }
             update(true);
         });
-
+        // chart zoom x to fit button
         $(chart_container_id + " .btn.btn-default.chart-ZoomXToFit").click(function() {
             if (xaxisVarId == null) {
                 DATA_DISPLAY_FROM_TIMESTAMP = -1;
                 DATA_DISPLAY_TO_TIMESTAMP = -1;
-                DATA_DISPLAY_WINDOW = DATA_TO_TIMESTAMP - DATA_FROM_TIMESTAMP
+                DATA_DISPLAY_WINDOW = DATA_TO_TIMESTAMP - DATA_FROM_TIMESTAMP;
                 set_x_axes();
             }else {
               pOpt = flotPlot.getOptions();
@@ -1279,7 +1383,9 @@ function PyScadaPlot(id, xaxisVarId, xaxisLinLog){
         });
     }
 
+    // update the chart
     function update(force){
+        // PREPARE THE CHART :
         if(!prepared ){
             if($(chart_container_id).is(":visible")){
                 prepared = true;
@@ -1288,6 +1394,7 @@ function PyScadaPlot(id, xaxisVarId, xaxisLinLog){
                 return;
             }
         }
+        // UPDATE DATA :
         if($(chart_container_id).is(":visible") || force){
             // only update if plot is visible
             // add the selected data series to the "series" variable
@@ -1297,9 +1404,11 @@ function PyScadaPlot(id, xaxisVarId, xaxisLinLog){
             start_id = 0;
             j=0;
             jk=1;
+            // for each variable
             for (var key in keys){
                 key = keys[key];
-                xkey = xaxisVarId
+                xkey = xaxisVarId;
+                // if the variable checkbox is check, update data
                 if($(legend_checkbox_id+key).is(':checked') && typeof(DATA[key]) === 'object'){
                     if (DATA_DISPLAY_TO_TIMESTAMP > 0 && DATA_DISPLAY_FROM_TIMESTAMP > 0){
                         start_id = find_index_sub_gte(DATA[key],DATA_DISPLAY_FROM_TIMESTAMP,0);
@@ -1319,13 +1428,13 @@ function PyScadaPlot(id, xaxisVarId, xaxisLinLog){
                         continue;
                     }else {
                         chart_data = DATA[key].slice(start_id,stop_id+1);
-                    };
+                    }
                     if (xkey == null) {
                         for (serie in old_series) {
 	                      if (new_data_bool === false && chart_data.length > 0 && key === old_series[serie]['key'] && chart_data.length !== old_series[serie]['data'].length && (old_series[serie]['data'].length == 0 || chart_data[0][0] !== old_series[serie]['data'][0][0] || chart_data[0][1] !== old_series[serie]['data'][0][1] || chart_data[chart_data.length-1][0] !== old_series[serie]['data'][old_series[serie]['data'].length-1][0] && chart_data[chart_data.length-1][1] !== old_series[serie]['data'][old_series[serie]['data'].length-1][-1])) {
 	                        new_data_bool = true;
 	                      }
-                        };
+                        }
                         series.push({"data":chart_data,"color":variables[key].color,"yaxis":variables[key].yaxis+1,"label":variables[key].label,"unit":variables[key].unit, "key":key, "points": {"show": axes[variables[key].yaxis].points,}, "stack": axes[variables[key].yaxis].stack, "lines": {"show": axes[variables[key].yaxis].lines, "steps": axes[variables[key].yaxis].steps, "fill": axes[variables[key].yaxis].fill,},});
                     }else if (xkey !== null && typeof(DATA[xkey]) === 'object'){
                         if (DATA_DISPLAY_TO_TIMESTAMP > 0 && DATA_DISPLAY_FROM_TIMESTAMP > 0){
@@ -1392,7 +1501,7 @@ function PyScadaPlot(id, xaxisVarId, xaxisLinLog){
                         }else {
                             chart_data_min = null;
                             chart_data_max = null;
-                        };
+                        }
                         if (new_data.length > 0){
                             j += 1;
                             //plot Y with different axis
@@ -1400,13 +1509,13 @@ function PyScadaPlot(id, xaxisVarId, xaxisLinLog){
                               if (new_data_bool === false && new_data.length > 0 && key === old_series[serie]['key'] && new_data.length !== old_series[serie]['data'].length && (old_series[serie]['data'].length == 0 || new_data[0][0] !== old_series[serie]['data'][0][0] || new_data[0][1] !== old_series[serie]['data'][0][1] || new_data[new_data.length-1][0] !== old_series[serie]['data'][old_series[serie]['data'].length-1][0] && new_data[new_data.length-1][1] !== old_series[serie]['data'][old_series[serie]['data'].length-1][-1] || chart_x_data[0][0] !== old_series[serie]['xdata'][0][0] || chart_x_data[0][1] !== old_series[serie]['xdata'][0][1] || chart_x_data[chart_x_data.length-1][0] !== old_series[serie]['xdata'][old_series[serie]['xdata'].length-1][0] && chart_x_data[chart_x_data.length-1][1] !== old_series[serie]['xdata'][old_series[serie]['xdata'].length-1][-1])) {
                                 new_data_bool = true;
                               }
-                            };
+                            }
                             series.push({"data":new_data, "xdata":chart_x_data,"color":variables[key].color,"yaxis":variables[key].yaxis+1,"label":variables[key].label,"unit":variables[key].unit,"chart_data_min":chart_data_min,"chart_data_max":chart_data_max,"x_data_min":x_data_min,"x_data_max":x_data_max, "key":key, "points": {"show": axes[variables[key].yaxis].points,}, "stack": axes[variables[key].yaxis].stack, "lines": {"show": axes[variables[key].yaxis].lines, "steps": axes[variables[key].yaxis].steps, "fill": axes[variables[key].yaxis].fill,},});
-                        };
-                    };
-                };
+                        }
+                    }
+                }
                 jk += 1;
-            };
+            }
 
             if (new_data_bool || old_series.length == 0 || force) {
 
@@ -1427,7 +1536,7 @@ function PyScadaPlot(id, xaxisVarId, xaxisLinLog){
 	                  pOpt.xaxes[0].min = DATA_FROM_TIMESTAMP;
 	                  pOpt.xaxes[0].max = DATA_TO_TIMESTAMP;
                   }
-                  pOpt.xaxes[0].key=0
+                  pOpt.xaxes[0].key=0;
               }else {
 
 
@@ -1457,7 +1566,7 @@ function PyScadaPlot(id, xaxisVarId, xaxisLinLog){
                   }
 
                   pOpt.xaxes[0].key=xkey
-              };
+              }
               // update flot plot
               flotPlot.setData(series);
               flotPlot.setupGrid(true);
@@ -1466,7 +1575,7 @@ function PyScadaPlot(id, xaxisVarId, xaxisLinLog){
               // Change the color of the axis
               if (xaxisVarId !== null && jk != 1){
                   for (k = 1;k <= jk;k++){
-                      S = series[k-1]
+                      S = series[k-1];
                       if (typeof S !== 'undefined') {
                           $(chart_container_id + ' .axisLabels.y' + S['yaxis'] + 'Label').css('fill',S['color'])
                           $(chart_container_id + ' .flot-y' + S['yaxis'] + '-axis text').css('fill',S['color'])
@@ -1477,6 +1586,7 @@ function PyScadaPlot(id, xaxisVarId, xaxisLinLog){
         }
     }
 
+    // resize the chart when the navigator window dimensiosn changed
     function resize() {
         if (typeof(flotPlot) !== 'undefined') {
             flotPlot.resize();
@@ -1515,27 +1625,33 @@ function Gauge(id, min_value, max_value, threshold_values){
     series = [],		// just the active data series
     keys   = [],		// list of variable keys (ids)
     variable_names = [], // list of all variable names
+    variables = {},     // list of all variable
     flotPlot,			// handle to plot
-    prepared = false,	//
-    chart_container_id = '#chart-container-'+id,
-    legend_table_id = '#chart-legend-table-' + id,
-    legend_checkbox_id = '#chart-legend-checkbox-' + id + '-',
-    legend_checkbox_status_id = '#chart-legend-checkbox-status-' + id + '-',
-    variables = {},
+    prepared = false,	// is the chart prepared
+
+    // chart container areas
+    chart_container_id = '#chart-container-'+id, // the HTML element where the chart is displayed
+    legend_table_id = '#chart-legend-table-' + id, // table of legend
+    legend_checkbox_id = '#chart-legend-checkbox-' + id + '-', // legend of checkbox, when checked will display the linked variable in the chart
+    legend_checkbox_status_id = '#chart-legend-checkbox-status-' + id + '-', // legend of checkbox status
+
+    // the object
     plot = this;
 
     // public functions
     plot.update 			= update;
     plot.prepare 			= prepare;
     plot.resize 			= resize;
-    plot.getSeries 			= function () { return series };
-    plot.getFlotObject		= function () { return flotPlot};
-    plot.getKeys			= function (){ return keys};
-    plot.getVariableNames	= function (){ return variable_names};
 
-    plot.getInitStatus		= function () { if(InitDone){return InitRetry}else{return false}};
-    plot.getId				= function () {return id};
-    plot.getChartContainerId= function () {return chart_container_id};
+    //getter
+    plot.getSeries 			= function () { return series ;};
+    plot.getFlotObject		= function () { return flotPlot;};
+    plot.getKeys			= function (){ return keys;};
+    plot.getVariableNames	= function (){ return variable_names;};
+
+    plot.getInitStatus		= function () { if(InitDone){return InitRetry}else{return false;}};
+    plot.getId				= function () {return id;};
+    plot.getChartContainerId= function () {return chart_container_id;};
 
     // init data
     val_id=$(chart_container_id).data('id');
@@ -1554,11 +1670,14 @@ function Gauge(id, min_value, max_value, threshold_values){
 		return "<div style='font-size:8pt; text-align:center; padding:2px; color:white;'>" + label + "<br/>" + Math.round(series.percent) + "%</div>";
 	}
 
+    // prepare the chart and display it even without data
     function prepare(){
-    };
+    }
 
+    // update the chart
     function update(force){
-        prepared = true
+        // prepare the chart
+        prepared = true;
         if(prepared && ($(chart_container_id).is(":visible") || force)){
             // only update if plot is visible
             // add the selected data series to the "series" variable
@@ -1569,18 +1688,23 @@ function Gauge(id, min_value, max_value, threshold_values){
                     data=[[min_value, DATA[key][DATA[key].length - 1][1]]]
                     series.push({"data":data, "label":variables[key].label});
                 }
-            };
+            }
+            // draw the chart if we have data
             if (series.length > 0) {
                 var plotCanvas = $('<div></div>');
                 elem = $(chart_container_id + ' .chart-placeholder')
+                
                 //mhw = Math.min(elem.parent().height() * 1.3, elem.parent().width());
                 mhw = elem.parent().width();
                 elem.parent().parent().css('height', mhw/1.3);
                 elem.parent().parent().find('.loading-gauge').text("");
                 elem.parent().parent().find('.gauge-title').css("display", "inherit");
+                
                 fontScale = parseInt(30, 10) / 100;
                 fontSize = Math.min(mhw / 5, 100) * fontScale;
-                options["series"]["gauges"]["value"] = {"font": {"size": fontSize}}
+                
+                options["series"]["gauges"]["value"] = {"font": {"size": fontSize}};
+                
                 var plotCss = {
                     top: '0px',
                     margin: 'auto',
@@ -1588,6 +1712,7 @@ function Gauge(id, min_value, max_value, threshold_values){
                     height: (elem.parent().height() * 0.9) + 'px',
                     width: mhw + 'px'
                 };
+
                 elem.css(plotCss)
                 //elem.append(plotCanvas);
                 flotPlot = $.plot(elem, series, options);
@@ -1595,6 +1720,7 @@ function Gauge(id, min_value, max_value, threshold_values){
         }
     }
 
+    // resize the chart when the navigator window dimensiosn changed
     function resize() {
         if (typeof(flotPlot) !== 'undefined') {
             flotPlot.resize();
@@ -1602,11 +1728,12 @@ function Gauge(id, min_value, max_value, threshold_values){
         }
     }
 }
-// Bar
-function Bar(id, min, max, xValues){
+// Bar - A Distributed Columns chart which display datas from one to multiple variables.
+// Bar requires data, an id ( used to display the chart in the right HTML element ), and a minimal and maximum value for y axe.
+function Bar(id, min, max){
     var options = {
         series: [{
-        data: [21, 22, 10, 28, 16, 21, 13, 30]
+        data: []
       }],
         chart: {
         height: 350,
@@ -1631,16 +1758,7 @@ function Bar(id, min, max, xValues){
         show: false
       },
       xaxis: {
-        categories: [
-            ['John', 'Doe'],
-            ['Joe', 'Smith'],
-            ['Jake', 'Williams'],
-            'Amber',
-            ['Peter', 'Brown'],
-            ['Mary', 'Evans'],
-            ['David', 'Wilson'],
-            ['Lily', 'Roberts'], 
-          ],
+        categories: [],
         labels: {
           style: {
             //colors: colors,
@@ -1650,74 +1768,130 @@ function Bar(id, min, max, xValues){
       }
     };
 
-    var options2 = {
-        series: [{
-        data: [21, 22, 10, 28, 16, 21, 13, 30]
-      }],
-        chart: {
-        height: 350,
-        type: 'bar',
-        events: {
-          click: function(chart, w, e) {
-            //console.log(chart, w, e)
-          }
-        }
-      },
-
-      plotOptions: {
-        bar: {
-          columnWidth: '45%',
-          distributed: true,
-        }
-      },
-      dataLabels: {
-        enabled: false
-      },
-      legend: {
-        show: false
-      },
-      xaxis: {
-        categories: [
-          ['John', 'Doe'],
-          ['Joe', 'Smith'],
-          ['Jake', 'Williams'],
-          'Amber',
-          ['Peter', 'Brown'],
-          ['Mary', 'Evans'],
-          ['David', 'Wilson'],
-          ['Lily', 'Roberts'], 
-        ],
-        labels: {
-          style: {
-       
-            fontSize: '12px'
-          }
-        }
-      }
-      };
-      prepared = false,	//
-
-    bar_container_id = '#chart-container-'+id;
-    plot = this;
-    apexPlot = null;
+    series = [{'x':'sd','y':45}, {'x':'dfg', 'y':56}],		// just the active data series
+    keys   = [],		// list of variable keys (ids)
+    variable_names = [], // list of all variable names
+    variables = {}, // list of all variables
+    prepared = false,	// state used to know if the chart is prepared or not
+    bar_container_id = '#chart-container-'+id, // the HTML element where the chart is displayed
+    legend_table_id = '#chart-legend-table-' + id, // table of legend
+    legend_checkbox_id = '#chart-legend-checkbox-' + id + '-', // legend of checkbox, when checked will display the linked variable in the chart
+    legend_checkbox_status_id = '#chart-legend-checkbox-status-' + id + '-', // legend of checkbox status
+    plot = this; // represent the object
+    apexPlot = null; // the chart
 
     // public functions
     plot.update 			= update;
     plot.prepare 			= prepare;
     plot.resize 			= resize;
-    plot.getId				= function () {return id};
-    plot.getPrepared				= function () {return prepared};
-    plot.getApexObject				= function () {return apexPlot};
+
+    // getter
+    plot.getId				= function () {return id;};
+    plot.getPrepared		= function () {return prepared;};
+    plot.getFlotObject		= function () {return apexPlot;};
     
+    plot.getSeries 			= function () { return series ;};
+    plot.getKeys			= function (){ return keys;};
+    plot.getVariableNames	= function (){ return variable_names;};
 
+    plot.getInitStatus		= function () { if(InitDone){return InitRetry;}else{return false;}};
+    plot.getId				= function () {return id;};
+    plot.getBarContainerId= function () {return bar_container_id;};
+
+
+    // init data 
+    $.each($(legend_table_id + ' .variable-config'),function(key,val){
+        val_inst = $(val);
+        variable_name = val_inst.data('name');
+        variable_key = val_inst.data('key');
+        variables[variable_key] = {'color':val_inst.data('color'),'yaxis':1};
+        keys.push(variable_key);
+        variable_names.push(variable_name);
+        unit = "";
+        label = "";
+        // set label and unit text of each variable of the chart
+        $.each($(legend_table_id + ' .legendSeries'),function(kkey,val){
+            val_inst = $(val);
+            if (variable_key == val_inst.find(".variable-config").data('key')){
+                variables[variable_key].label = val_inst.find(".legendLabel").text().replace(/\s/g, '');
+                variables[variable_key].unit = val_inst.find(".legendUnit").text().replace(/\s/g, '');
+            }
+        });
+    });
+
+    // prepare the chart and display it even without data
     function prepare(){
-        console.log(bar_container_id);
-        prepared = true;
+        // prepare legend table sorter
+        if (keys.length > 0) {
+            $(legend_table_id).tablesorter({sortList: [[2,0]]});
+        }
 
-        apexPlot = new ApexCharts(document.querySelector("#chart"),options2);
+        // add onchange function to every checkbox in legend / shows or hides the variable linked to the checked/unchecked checkbox
+        $.each(variables,function(key,val){
+            $(legend_checkbox_id+key).change(function() {
+                plot.update(true);
+                if ($(legend_checkbox_id+key).is(':checked')){
+                    $(legend_checkbox_status_id+key).html(1);
+                }else{
+                    $(legend_checkbox_status_id+key).html(0);
+                }
+            });
+        });
+        // add onchange function to make_all_none checkbox in legend / shows or hides the chart's variables
+        $(legend_checkbox_id+'make_all_none').change(function() {
+            if ($(legend_checkbox_id+'make_all_none').is(':checked')){
+                $.each(variables,function(key,val){
+                    $(legend_checkbox_status_id+key).html(1);
+                    $(legend_checkbox_id+key)[0].checked = true;
+                });
+            }else{
+                $.each(variables,function(key,val){
+                    $(legend_checkbox_status_id+key).html(0);
+                    $(legend_checkbox_id+key)[0].checked = false;
+                 });
+            }
+            plot.update(true);
+        });
+
+
+        // expand the pie to the maximum width
+        main_chart_area = $(bar_container_id).closest('.main-chart-area');
+
+        
+        contentAreaHeight = main_chart_area.parent().height();
+        mainChartAreaHeight = main_chart_area.height();
+
+        // resize the main chart area if the content height exceed the main chart's
+        if (contentAreaHeight>mainChartAreaHeight){
+            main_chart_area.height(contentAreaHeight);
+        }
+
+
+        // Since CSS transforms use the top-left corner of the label as the transform origin,
+        // we need to center the y-axis label by shifting it down by half its width.
+        // Subtract 20 to factor the chart's bottom margin into the centering.
+        var chartTitle = $(bar_container_id + ' .chartTitle');
+        chartTitle.css("margin-left", -chartTitle.width() / 2);
+        var xaxisLabel = $(bar_container_id + ' .axisLabel.xaxisLabel');
+        xaxisLabel.css("margin-left", -xaxisLabel.width() / 2);
+        var yaxisLabel = $(bar_container_id + ' .axisLabel.yaxisLabel');
+        yaxisLabel.css("margin-top", yaxisLabel.width() / 2 - 20);
+
+        // if we have data, then we display the bar chart
+        if (series.length > 0) {
+            apexPlot = new ApexCharts(document.querySelector(bar_container_id+' .chart-placeholder'),options);
+            apexPlot.render();
+
+            prepared = true;
+            // update the plot
+            update(false);
+        }else {
+            prepared = false;
+        }
     }
 
-    function update(){
+    // update the chart
+    function update(force){
         if(!prepared ){
             if($(bar_container_id).is(":visible")){
                 prepared = true;
@@ -1726,14 +1900,58 @@ function Bar(id, min, max, xValues){
                 return;
             }
         }
-        apexPlot.render();
+        if(prepared && ($(bar_container_id).is(":visible") || force)){
+            // only update if plot is visible
+            // add the selected data series to the "series" variable
+            series = [];
+
+            for (var key in keys){
+                key = keys[key];
+                if($(legend_checkbox_id+key).is(':checked') && typeof(DATA[key]) === 'object'){
+                    series.push({"data":DATA[key][DATA[key].length - 1], "label":variables[key].label,"unit":variables[key].unit, "color":variables[key].color});
+                }
+            }
+            if (series.length > 0) {
+                if (typeof apexPlot !== 'undefined') {
+                    // update flot plot
+                    var dataBar = [];
+                    var categorieNames = [];
+                    for (var i = 0; i<series.length; i++){
+                        console.log(i);
+                        console.log(series);
+                        const obj = {};
+                        obj.x = series[i].label;
+                        obj.y = series[i].data;
+                        categorieNames.push(obj.x);
+                        dataBar.push(obj);
+                    }
+                    apexPlot.updateOptions({
+                        series: [{
+                          data: dataBar
+                        }],
+                        xaxis: {
+                          categories: categorieNames
+                        }
+                      });
+                }
+            }
+            else {
+                apexPlot.updateOptions({
+                    series: [{
+                      data: []
+                    }],
+                    xaxis: {
+                      categories: []
+                    }
+                  });
+            }
+        }
     }
 
     function resize() {
-
     }
 }
-// Pie
+// Pie - chart with radius and innierRadius options
 function Pie(id, radius, innerRadius){
     var options = {
         series: {
@@ -1759,34 +1977,36 @@ function Pie(id, radius, innerRadius){
     series = [],		// just the active data series
     keys   = [],		// list of variable keys (ids)
     variable_names = [], // list of all variable names
+    variables = {},     // list of all variable
     flotPlot,			// handle to plot
-    prepared = false,	//
-    chart_container_id = '#chart-container-'+id,
-    legend_table_id = '#chart-legend-table-' + id,
-    legend_checkbox_id = '#chart-legend-checkbox-' + id + '-',
-    legend_checkbox_status_id = '#chart-legend-checkbox-status-' + id + '-',
-    variables = {},
-    plot = this;
+    prepared = false,	// is the chart prepared
+    chart_container_id = '#chart-container-'+id, // the HTML element where the chart is displayed
+    legend_table_id = '#chart-legend-table-' + id, // table of legend
+    legend_checkbox_id = '#chart-legend-checkbox-' + id + '-', // legend of checkbox, when checked will display the linked variable in the chart
+    legend_checkbox_status_id = '#chart-legend-checkbox-status-' + id + '-', // legend of checkbox status
+    plot = this; // the object
 
     // public functions
     plot.update 			= update;
     plot.prepare 			= prepare;
     plot.resize 			= resize;
-    plot.getSeries 			= function () { return series };
-    plot.getFlotObject		= function () { return flotPlot};
-    plot.getKeys			= function (){ return keys};
-    plot.getVariableNames	= function (){ return variable_names};
 
-    plot.getInitStatus		= function () { if(InitDone){return InitRetry}else{return false}};
-    plot.getId				= function () {return id};
-    plot.getChartContainerId= function () {return chart_container_id};
+    // getter
+    plot.getSeries 			= function () { return series ;};
+    plot.getFlotObject		= function () { return flotPlot;};
+    plot.getKeys			= function (){ return keys;};
+    plot.getVariableNames	= function (){ return variable_names;};
+
+    plot.getInitStatus		= function () { if(InitDone){return InitRetry;}else{return false;}};
+    plot.getId				= function () {return id;};
+    plot.getChartContainerId= function () {return chart_container_id;};
 
     // init data
     $.each($(legend_table_id + ' .variable-config'),function(key,val){
         val_inst = $(val);
         variable_name = val_inst.data('name');
         variable_key = val_inst.data('key');
-        variables[variable_key] = {'color':val_inst.data('color'),'yaxis':1}
+        variables[variable_key] = {'color':val_inst.data('color'),'yaxis':1};
         keys.push(variable_key);
         variable_names.push(variable_name);
         unit = "";
@@ -1804,13 +2024,14 @@ function Pie(id, radius, innerRadius){
 		return "<div style='font-size:8pt; text-align:center; padding:2px; color:white;'>" + label + "<br/>" + Math.round(series.percent) + "%</div>";
 	}
 
+    // prepare the chart and display it even without data
     function prepare(){
         // prepare legend table sorter
         if (keys.length > 0) {
             $(legend_table_id).tablesorter({sortList: [[2,0]]});
-        };
+        }
 
-        // add onchange function to every checkbox in legend
+        // add onchange function to every checkbox in legend / shows or hides the variable linked to the checked/unchecked checkbox
         $.each(variables,function(key,val){
             $(legend_checkbox_id+key).change(function() {
                 plot.update(true);
@@ -1821,7 +2042,7 @@ function Pie(id, radius, innerRadius){
                 }
             });
         });
-        //
+        // add onchange function to make_all_none checkbox in legend / shows or hides the chart's variables
         $(legend_checkbox_id+'make_all_none').change(function() {
             if ($(legend_checkbox_id+'make_all_none').is(':checked')){
                 $.each(variables,function(key,val){
@@ -1842,7 +2063,8 @@ function Pie(id, radius, innerRadius){
 
         contentAreaHeight = main_chart_area.parent().height();
         mainChartAreaHeight = main_chart_area.height();
-
+        
+        // resize the main chart area if the content height exceed the main chart's
         if (contentAreaHeight>mainChartAreaHeight){
             main_chart_area.height(contentAreaHeight);
         }
@@ -1857,16 +2079,19 @@ function Pie(id, radius, innerRadius){
         var yaxisLabel = $(chart_container_id + ' .axisLabel.yaxisLabel');
         yaxisLabel.css("margin-top", yaxisLabel.width() / 2 - 20);
 
+        // draw the chart if we have data
         if (series.length > 0) {
-            flotPlot = $.plot($(chart_container_id + ' .chart-placeholder'), series, options)
+            flotPlot = $.plot($(chart_container_id + ' .chart-placeholder'), series, options);
             // update the plot
             update(false);
         }else {
             //prepared = false;
         }
-    };
+    }
 
+    // update the chart
     function update(force){
+        // prepare the chart
         if(!prepared ){
             if($(chart_container_id).is(":visible")){
                 prepared = true;
@@ -1875,6 +2100,7 @@ function Pie(id, radius, innerRadius){
                 return;
             }
         }
+        // update the chart
         if(prepared && ($(chart_container_id).is(":visible") || force)){
             // only update if plot is visible
             // add the selected data series to the "series" variable
@@ -1883,8 +2109,8 @@ function Pie(id, radius, innerRadius){
                 key = keys[key];
                 if($(legend_checkbox_id+key).is(':checked') && typeof(DATA[key]) === 'object'){
                     series.push({"data":DATA[key][DATA[key].length - 1], "label":variables[key].label,"unit":variables[key].unit, "color":variables[key].color});
-                };
-            };
+                }
+            }
             if (series.length > 0) {
                 if (typeof flotPlot !== 'undefined') {
                     // update flot plot
@@ -1898,6 +2124,7 @@ function Pie(id, radius, innerRadius){
         }
     }
 
+    // resize the chart when the navigator window dimensiosn changed
     function resize() {
         if (typeof(flotPlot) !== 'undefined') {
             flotPlot.resize();
@@ -1957,7 +2184,7 @@ function set_chart_selection_mode(){
 }
 
 
-// X AXES :
+// X AXES - for each chart container, update charts then update timeline :
 function set_x_axes(){
     if(!progressbar_resize_active){
         $.each(PyScadaPlots,function(plot_id){
@@ -1972,7 +2199,7 @@ function set_x_axes(){
 }
 
 
-// UPDATE TIMELINE - if changes, update the timeline axe 
+// UPDATE TIMELINE - update the timeline axe depending on data timestamp variables
 function update_timeline(){
     if (DATA_DISPLAY_TO_TIMESTAMP < 0){
         $('#timeline-time-to-label').html("");
@@ -2042,7 +2269,6 @@ function setCrosshairs(flotPlot, id) {
     });
 }
 // Delete Crosshairs
-
 function delCrosshairs(flotPlot) {
     $.each(PyScadaPlots,function(plot_id){
         if (typeof PyScadaPlots[plot_id].getFlotObject() !== 'undefined') {
@@ -2214,31 +2440,39 @@ function timeline_drag( event, ui ) {
 
 // FORM :
 function check_form(id_form) {
+
     err = false;
     tabinputs = $.merge($('#'+id_form+ ' :text:visible'),$('#'+id_form+ ' :input:not(:text):hidden'));
+
     for (i=0;i<tabinputs.length;i++){ //test if there is an empty or non numeric value
+
         value = $(tabinputs[i]).val();
         id = $(tabinputs[i]).attr('id');
+
         var_name = $(tabinputs[i]).attr("name");
-        val=$('.variable-config[data-id='+id.replace('-value', '')+']')
+        val=$('.variable-config[data-id='+id.replace('-value', '')+']');
         key = parseInt($(val).data('key'));
+
         item_type = $(val).data('type');
         value_class = $(val).data('value-class');
+
         min = $(val).data('min');
         max = $(val).data('max');
         min_type = $(val).data('min-type');
         max_type = $(val).data('max-type');
-        if (min_type == 'lte') {min_type_char = ">="} else {min_type_char = ">"};
-        if (max_type == 'gte') {max_type_char = "<="} else {max_type_char = "<"};
+
+
+        if (min_type == 'lte') {min_type_char = ">=";} else {min_type_char = ">";}
+        if (max_type == 'gte') {max_type_char = "<=";} else {max_type_char = "<";}
 
         if (value == "" || value == null){
             $(tabinputs[i]).parents(".input-group").addClass("has-error");
-            $(tabinputs[i]).parents(".input-group").find('.help-block').remove()
+            $(tabinputs[i]).parents(".input-group").find('.help-block').remove();
             $(tabinputs[i]).parents(".input-group").append('<span id="helpBlock-' + id + '" class="help-block">Please provide a value !</span>');
             err = true;
         }else {
-            $(tabinputs[i]).parents(".input-group").find('.help-block').remove()
-            check_mm = check_min_max(parseFloat(value), parseFloat(min), parseFloat(max), min_type, max_type)
+            $(tabinputs[i]).parents(".input-group").find('.help-block').remove();
+            check_mm = check_min_max(parseFloat(value), parseFloat(min), parseFloat(max), min_type, max_type);
             if (check_mm == -1) {
                 $(tabinputs[i]).parents(".input-group").addClass("has-error");
                 $(tabinputs[i]).parents(".input-group").append('<span id="helpBlock-' + id + '" class="help-block">Enter a value ' + min_type_char + ' ' + min + '</span>');
@@ -2248,7 +2482,7 @@ function check_form(id_form) {
                 $(tabinputs[i]).parents(".input-group").append('<span id="helpBlock-' + id + '" class="help-block">Enter a value ' + max_type_char + ' ' + max + '</span>');
                 err = true;
             }else if (check_mm == 0) {
-                $(tabinputs[i]).parents(".input-group").removeClass("has-error")
+                $(tabinputs[i]).parents(".input-group").removeClass("has-error");
                 if (isNaN(value)) {
                     if (item_type == "variable_property" && value_class == 'STRING') {
                     }else {
@@ -2259,13 +2493,15 @@ function check_form(id_form) {
                 }
             }
         }
-    };
+    }
+
     tabselects = $('#'+id_form+ ' .select');
+
     for (i=0;i<tabselects.length;i++){ //test if there is an empty value
         value = $(tabselects[i]).val();
         id = $(tabselects[i]).attr('id');
         var_name = $(tabselects[i]).data("name");
-        val=$('.variable-config[data-id='+id.replace('-value', '')+']')
+        val=$('.variable-config[data-id='+id.replace('-value', '')+']');
         key = parseInt($(val).data('key'));
         item_type = $(val).data('type');
         value_class = $(val).data('value-class');
@@ -2273,17 +2509,17 @@ function check_form(id_form) {
         max = $(val).data('max');
         min_type = $(val).data('min-type');
         max_type = $(val).data('max-type');
-        if (min_type == 'lte') {min_type_char = ">="} else {min_type_char = ">"};
-        if (max_type == 'gte') {max_type_char = "<="} else {max_type_char = "<"};
+        if (min_type == 'lte') {min_type_char = ">=";} else {min_type_char = ">";}
+        if (max_type == 'gte') {max_type_char = "<=";} else {max_type_char = "<";}
 
         if (value == "" || value == null){
             $(tabselects[i]).parents(".input-group").addClass("has-error");
-            $(tabselects[i]).parents(".input-group").find('.help-block').remove()
+            $(tabselects[i]).parents(".input-group").find('.help-block').remove();
             $(tabselects[i]).parents(".input-group").append('<span id="helpBlock-' + id + '" class="help-block">Please provide a value !</span>');
             err = true;
         }else {
-            $(tabselects[i]).parents(".input-group").find('.help-block').remove()
-            check_mm = check_min_max(parseFloat(value), parseFloat(min), parseFloat(max), min_type, max_type)
+            $(tabselects[i]).parents(".input-group").find('.help-block').remove();
+            check_mm = check_min_max(parseFloat(value), parseFloat(min), parseFloat(max), min_type, max_type);
             if (check_mm == -1) {
                 $(tabselects[i]).parents(".input-group").addClass("has-error");
                 $(tabselects[i]).parents(".input-group").append('<span id="helpBlock-' + id + '" class="help-block">Enter a value ' + min_type_char + ' ' + min + '</span>');
@@ -2293,7 +2529,7 @@ function check_form(id_form) {
                 $(tabselects[i]).parents(".input-group").append('<span id="helpBlock-' + id + '" class="help-block">Enter a value ' + max_type_char + ' ' + max + '</span>');
                 err = true;
             }else if (check_mm == 0) {
-                $(tabselects[i]).parents(".input-group").removeClass("has-error")
+                $(tabselects[i]).parents(".input-group").removeClass("has-error");
                 if (isNaN(value)) {
                     if (item_type == "variable_property" && value_class == 'STRING') {
                     }else {
@@ -2304,7 +2540,7 @@ function check_form(id_form) {
                 }
             }
         }
-    };
+    }
     return err;
 }
 
@@ -2475,7 +2711,9 @@ function update_log() {
             return false;
         }
     }
+
     show_update_status();
+
     $.ajax({
         url: ROOT_URL+'json/log_data/',
         type: 'post',
@@ -2505,16 +2743,16 @@ function update_log() {
 
 // REFRESH LOGO :
 function refresh_logo(key, type){
-    if (type == "variable") {type_short="var"} else {type_short = "prop"};
+    if (type == "variable") {type_short="var";} else {type_short = "prop";}
     $.each($(".control-item.type-numeric." + type_short + "-" + key + " img"), function(k,v){
         $(v).remove();
     });
     if ($(".variable-config[data-refresh-requested-timestamp][data-key=" + key + "][data-type=" + type + "]").attr('data-refresh-requested-timestamp')>$(".variable-config[data-value-timestamp][data-key=" + key + "][data-type=" + type + "]").attr('data-value-timestamp')) {
         $.each($(".control-item.type-numeric." + type_short + "-" + key), function(k,v){
             val_temp=$(v).html();
-            $(v).prepend('<img style="height:14px;" src="/static/pyscada/img/load.gif" alt="refreshing">')
+            $(v).prepend('<img style="height:14px;" src="/static/pyscada/img/load.gif" alt="refreshing">');
             //$(v).html('<img style="height:14px;" src="/static/pyscada/img/load.gif" alt="refreshing">' + val_temp);
-        })
+        });
     }else {
         $.each($(".control-item.type-numeric." + type_short + "-" + key + " img"), function(k,v){
             $(v).remove();
@@ -2525,10 +2763,12 @@ function refresh_logo(key, type){
 
 // CHECK MIN MAX :
 function check_min_max(value, min, max, min_strict, max_strict) {
+
     min_strict = typeof min_strict !== 'undefined' ? min_strict : "lte";
     max_strict = typeof max_strict !== 'undefined' ? max_strict : "gte";
     min = typeof min !== 'undefined' ? min : false;
     max = typeof max !== 'undefined' ? max : false;
+
     if (min_strict == "lt" && parseFloat(value) <= parseFloat(min) && min !== false) {
         return -1;
     }
@@ -2615,6 +2855,8 @@ function daterange_set(start, end) {
 }
 // Date Range Cb 
 function daterange_cb(start, end) {
+    //
+    //
     $('#daterange span').html(start.format(daterange_format) + ' - ' + end.format(daterange_format));
     set_content_padding_top();
 }
@@ -2628,7 +2870,7 @@ function daterange_cb(start, end) {
 
 //form/read-task
 $('button.read-task-set').click(function(){
-    t = SERVER_TIME
+    t = SERVER_TIME;
     key = $(this).data('key');
     type = $(this).data('type');
     $(".variable-config[data-key=" + key + "][data-type=" + type + "]").attr('data-refresh-requested-timestamp',t)
@@ -2647,7 +2889,7 @@ $('button.read-task-set').click(function(){
         }
     });
     $(this)[0].disabled = false;
-})
+});
 
 //form/write_task/
 $('button.write-task-set').click(function(){
@@ -2660,15 +2902,15 @@ $('button.write-task-set').click(function(){
     value_class = $(this).data('value-class');
     min_type = $(this).data('min-type');
     max_type = $(this).data('max-type');
-    if (min_type == 'lte') {min_type_char = ">="} else {min_type_char = ">"};
-    if (max_type == 'gte') {max_type_char = "<="} else {max_type_char = "<"};
+    if (min_type == 'lte') {min_type_char = ">=";} else {min_type_char = ">";}
+    if (max_type == 'gte') {max_type_char = "<=";} else {max_type_char = "<";}
     if (value == "" || value == null) {
         $(this).parents(".input-group").addClass("has-error");
         $(this).parents(".input-group").find('.help-block').remove()
         $(this).parents(".input-group-btn").after('<span id="helpBlock-' + id + '" class="help-block">Please provide a value !</span>');
     }else {
-        $(this).parents(".input-group").find('.help-block').remove()
-        check_mm = check_min_max(parseFloat(value), parseFloat(min), parseFloat(max), min_type, max_type)
+        $(this).parents(".input-group").find('.help-block').remove();
+        check_mm = check_min_max(parseFloat(value), parseFloat(min), parseFloat(max), min_type, max_type);
         if (check_mm == -1) {
             $(this).parents(".input-group").addClass("has-error");
             $(this).parents(".input-group-btn").after('<span id="helpBlock-' + id + '" class="help-block">Enter a value ' + min_type_char + ' ' + min + '</span>');
@@ -2959,10 +3201,9 @@ $( document ).ready(function() {
         max = $(val).data('max');
         if ( min === null ) {min = 0;}
         if ( max === null ) {max = 100;}
-        values = [0, 1, 4, 5];
-        // values = JSON.parse($(val).data('values'));
+ 
         // add a new Plot
-        PyScadaPlots.push(new Bar(id, min, max, values));
+        PyScadaPlots.push(new Bar(id, min, max));
     });
     $.each($('.chart-container'),function(key,val){
         // get identifier of the chart
@@ -3034,7 +3275,7 @@ $( document ).ready(function() {
         set_chart_selection_mode();
     });
 
-    //setTimeout(function() {data_handler();}, 5000);
+    setTimeout(function() {data_handler();}, 5000);
     set_chart_selection_mode();
 
 
