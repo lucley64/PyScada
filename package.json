@@ -1,0 +1,26 @@
+{
+  "name": "pyscada",
+  "version": "1.0.0",
+  "description": "PyScada a open source SCADA system ==================================",
+  "main": "pyscada_v0-7-0rc14.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "doc": "jsdoc -c jsdoc.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lucley64/PyScada.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/lucley64/PyScada/issues"
+  },
+  "homepage": "https://github.com/lucley64/PyScada#readme",
+  "devDependencies": {
+    "jsdoc": "^3.6.10"
+  }
+}

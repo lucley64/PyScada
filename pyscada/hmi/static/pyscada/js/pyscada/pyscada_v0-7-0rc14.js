@@ -126,7 +126,11 @@ var VARIABLE_PROPERTIES_LAST_MODIFIED = {};
 //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
-// Add Data
+/**
+ * Adding fetched data
+ * @param {number} key 
+ * @param {*} value 
+ */
 function add_fetched_data(key,value){
 
     // CHECK THE INPUT 'value' :
@@ -228,7 +232,12 @@ function add_fetched_data(key,value){
 
 // TIME :
 
-// Timestamp Conversion 
+/**
+ * Timestamp Conversion 
+ * @param {number} id 
+ * @param {*} val 
+ * @returns {string} 
+ */
 function timestamp_conversion(id,val){
     if ($(".variable-config[data-timestamp-conversion][data-id=" + id + "]").attr('data-timestamp-conversion') == 1){
         // convert timestamp to local date
@@ -242,7 +251,11 @@ function timestamp_conversion(id,val){
     }
     return val;
 }
-// Ms To Time
+/**
+ * Convert milliseconds into time format
+ * @param {*} duration 
+ * @returns {string}
+ */
 function msToTime(duration) {
     var milliseconds = parseInt(duration % 1000),
       seconds = Math.floor((duration / 1000) % 60),
@@ -265,7 +278,12 @@ function msToTime(duration) {
 }
 
 
-// DICTIONARY :
+/**
+ * Returns data type of val in the data dictionnary
+ * @param {number} id 
+ * @param {number|boolean} val 
+ * @returns {*}
+ */
 function dictionary(id,val){
     if ($(".variable-config[data-dictionary][data-id=" + id + "]").attr('data-dictionary')){
         // apply dictionary
@@ -281,7 +299,11 @@ function dictionary(id,val){
 }
 
 
-// UPDATE DATA COLORS :
+/**
+ * Return id's variable's color
+ * @param {number} id 
+ * @param {boolean} val 
+ */
 function update_data_colors(id,val){
     // variable colors
     color_type = $(".variable-config[data-color-type][data-id=" + id + "]").attr('data-color-type');
@@ -378,7 +400,12 @@ function update_data_colors(id,val){
 //                                                  Data's Functions
 //                             -----------------------------------------------------------
 
-// Update Data
+/**
+ * Update variable data values 
+ * @param {number} key 
+ * @param {*} val 
+ * @param {number} time 
+ */
 function update_data_values(key,val,time){
 
     // CHECKING 'key' TYPE :
@@ -580,7 +607,10 @@ function update_data_values(key,val,time){
 }
 
 
-// Check Buffer - Update DATA, by erasing datas which are out of date
+/**
+ * Update DATA, by erasing datas which are out of date
+ * @param {number} key 
+ */
 function check_buffer(key){
     if ((DATA[key][0][0] < DATA_FROM_TIMESTAMP)){
         stop_id = find_index_sub_lte(DATA[key],DATA_FROM_TIMESTAMP,0);
@@ -589,7 +619,9 @@ function check_buffer(key){
 }
 
 
-// Data Handler - Update periodically the DATA, by requesting the server
+/**
+ * Update periodically the DATA, by requesting the server
+ */
 function data_handler(){
     if(AUTO_UPDATE_ACTIVE || !INIT_STATUS_VARIABLES_DONE || !INIT_CHART_VARIABLES_DONE){
         if(DATA_TO_TIMESTAMP==0){
@@ -682,7 +714,14 @@ function data_handler(){
 }
 
 
-// Data Handler Ajax - Send data to the Data handler
+/**
+ * Send data to the Data handler
+ * @param {boolean} init 
+ * @param {Array<number>} variable_keys 
+ * @param {Array<*>} variable_property_keys 
+ * @param {number} timestamp_from 
+ * @param {number} timestamp_to 
+ */
 function data_handler_ajax(init,variable_keys,variable_property_keys,timestamp_from,timestamp_to){
     show_update_status();
     FETCH_DATA_PENDING++;
@@ -701,7 +740,10 @@ function data_handler_ajax(init,variable_keys,variable_property_keys,timestamp_f
 }
 
 
-// Data Handler Done - Update DATA and Charts
+/**
+ * Update DATA and Charts
+ * @param {Array<*>} fetched_data 
+ */
 function data_handler_done(fetched_data){
 
     update_charts = true;
@@ -815,7 +857,12 @@ function data_handler_done(fetched_data){
 }
 
 
-// Data Handler Fail - Will display an error notification
+/**
+ * Will display an error notification
+ * @param {*} x 
+ * @param {*} t 
+ * @param {*} m 
+ */
 function data_handler_fail(x, t, m) {
     //check if we are unauthenticated
     if (x.status !== 0 && x.getResponseHeader("content-type") !== null && x.getResponseHeader("content-type").indexOf("text/html") !== -1) {
@@ -857,7 +904,12 @@ function data_handler_fail(x, t, m) {
 
 // FIND INDEX :
 
-// Find Index - Return index 'i' where a value in 'a' is lower or equal to value 't'
+/**
+ * Return index 'i' where a value in 'a' is lower or equal to value 't'
+ * @param {Array} a 
+ * @param {number} t 
+ * @returns {number} The index
+ */
 function find_index(a,t){
     var i = a.length; //or 10
     while(i--){
@@ -866,7 +918,13 @@ function find_index(a,t){
         }
     }
 }
-// Find Index Sub Lte - Return index 'i' where a value in 'd' is lower or equal to value 't'
+/**
+ * Return index 'i' where a value in 'd' is lower or equal to value 't'
+ * @param {Array} a 
+ * @param {number} t 
+ * @param {number} d 
+ * @returns {number} The index
+ */
 function find_index_sub_lte(a,t,d){
     var i = a.length; //or 10
     while(i--){
@@ -875,7 +933,13 @@ function find_index_sub_lte(a,t,d){
         }
     }
 }
-// Find Index Sub Gte - Return index 'i' where a value in 'd' is superior or equal to value 't'
+/**
+ * Return index 'i' where a value in 'd' is superior or equal to value 't'
+ * @param {Array} a 
+ * @param {number} t 
+ * @param {number} d 
+ * @returns {number} The index
+ */
 function find_index_sub_gte(a,t,d){
     var i = 0; //or 10
     while(i < a.length){
@@ -898,6 +962,12 @@ function find_index_sub_gte(a,t,d){
 
 
 // COLOR OBJECT :
+/**
+ * Color class
+ * @param {number} red 
+ * @param {number} green 
+ * @param {number} blue 
+ */
 function Color(red,green,blue) {
     this.red = red;
     this.green = green;
@@ -906,7 +976,12 @@ function Color(red,green,blue) {
 
 // CHARTS OBJETCS :
 
-// Plot - a chart with x y axes, with logarithmic mode
+/**
+ * a chart with x y axes, with logarithmic mode
+ * @param {number} id The container id where to display the chart
+ * @param {boolean} xaxisVarId 
+ * @param {boolean} xaxisLinLog 
+ */
 function PyScadaPlot(id, xaxisVarId, xaxisLinLog){
     var options = {
         legend: {
