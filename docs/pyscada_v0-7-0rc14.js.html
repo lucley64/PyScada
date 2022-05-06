@@ -46,64 +46,193 @@ Licensed under the GPL.
 //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-
+/**
+ * Script's version
+ * @type {string}
+ */
 var version = "0.7.0rc23";
+
+/**
+ * Date format : day/month/year hours:minutes:seconds
+ * @type {string}
+ */
 var daterange_format = "DD/MM/YYYY HH:mm:ss";
 
 //                             -----------------------------------------------------------
 //                                             Client-Server's Variables
 //                             -----------------------------------------------------------
-
-var LOADING_PAGE_DONE = 0; // 0 = not loaded / 1 = loaded
-
-var debug = 0; // (AMELIORATION PAS UTILISÉ)
+/**
+ * Loading page state - 0 = not loaded / 1 = loaded
+ * @type {boolean}
+ */
+var LOADING_PAGE_DONE = 0; 
+/**
+ * ???
+ */
+var debug = 0; 
 
 
 // Loadings :
-var loading_percent = 0; // (AMELIORATION PAS UTILISÉ)
-var loading_states = {}; // all recorded loading states
-var loading_labels = {0:'CSS: ', 1:'Loading javascript: ', 4:'Loading static variables: ', 5:'Loading chart variables: ',}; // current loading state
+/**
+ * Loading percentage
+ * @type {number}
+ */
+var loading_percent = 0; 
+
+/**
+ * All recorded loading states
+ * @type {number}
+ */
+var loading_states = {}; 
+
+/**
+ * Current loading state
+ * @type {string}
+ */
+var loading_labels = {0:'CSS: ', 1:'Loading javascript: ', 4:'Loading static variables: ', 5:'Loading chart variables: ',}; 
 
 // Ajax :
+/**
+ * Count of all the JSON errors - used for errors notification.
+ * @type {number}
+ */
 var JSON_ERROR_COUNT = 0;
+
+/**
+ * Current server time
+ * @type {number}
+ */
 var SERVER_TIME = 0;
+
+/**
+ * Last recorded query time
+ * @type {number}
+ */
 var LAST_QUERY_TIME = 0; 
+
+/**
+ * Token used for the ajax setup
+ * @type {string}
+ */
 var CSRFTOKEN = $.cookie('csrftoken');
+
+/**
+ * Refresh rate in milliseconds - used to update data
+ * @type {number}
+ */
 var REFRESH_RATE = 2500;
-var CACHE_TIMEOUT = 15000; // in milliseconds (AMELIORATION)    
+
+/**
+ * Cache timeout in milliseconds
+ * @type {number}
+ */
+var CACHE_TIMEOUT = 15000; 
+
+/**
+ * Root's url - used to locate pyscada elements
+ * @type {string}
+ */
 var ROOT_URL = window.location.protocol+"//"+window.location.host + "/";
 
 // Log :
+/**
+ * Log's last timestamp - Collect the data last timestamp
+ * @type {number}
+ */
 var LOG_LAST_TIMESTAMP = 0;
+
+/**
+ * Count of fetching data pending
+ * @type {boolean}
+ */
 var LOG_FETCH_PENDING_COUNT = false;
 
 // Status :
+/**
+ * Chart initialization status count -
+ * @type {number}
+ */
 var INIT_STATUS_COUNT = 0;
+
+/**
+ * Chart update status count
+ * @type {number}
+ */
 var UPDATE_STATUS_COUNT = 0;
+
+/**
+ * Auto chart's data update button active
+ * @type {boolean}
+ */
 var AUTO_UPDATE_ACTIVE = true;
+
+/**
+ * Previous auto chart's data update button active
+ * @type {boolean}
+ */
 var PREVIOUS_AUTO_UPDATE_ACTIVE_STATE = false;
+
+/**
+ * Last end date 
+ * @type {number}
+ */
 var PREVIOUS_END_DATE = 0;
 
 // Notifications :
+/**
+ * Count of all displayed notification 
+ * @type {number}
+ */
 var NOTIFICATION_COUNT = 0;
+
+/**
+ * Id of the 'data out of date' error notification to display
+ * @type {number}
+ */
 var DATA_OUT_OF_DATE_ALERT_ID = '';
 
 
 //                             -----------------------------------------------------------
 //                                                      Objects
 //                             -----------------------------------------------------------
-
+/**
+ * Chart's variables initialization count 
+ * @type {number}
+ */
 var INIT_CHART_VARIABLES_COUNT = 0;
+
+/**
+ * Chart's variables initialization state
+ * @type {boolean}
+ */
 var INIT_CHART_VARIABLES_DONE = false;
 
 
 // List of Charts
+/**
+ * List of chart's variables keys 
+ * @type {Array&lt;number>}
+ */
 var CHART_VARIABLE_KEYS = {count:function(){var c = 0;for (var key in this){c++;} return c-2;},keys:function(){var k = [];for (var key in this){if (key !=="keys" &amp;&amp; key !=="count"){k.push(key);}} return k;}};
 
 // Plot :
-var PyScadaApex = []
+
+/**
+ * List of all the chart to display
+ * @type {Array&lt;object>}
+ */
 var PyScadaPlots = [];
+
+/**
+ * X axe's progress bar resize function state
+ * @type {boolean}
+ */
 var progressbar_resize_active = false;
+
+/**
+ * Update chart's x axes time line status 
+ * @type {boolean}
+ */
 var UPDATE_X_AXES_TIME_LINE_STATUS = true;
 
 
@@ -111,36 +240,121 @@ var UPDATE_X_AXES_TIME_LINE_STATUS = true;
 //                                                  Data's Variables
 //                             -----------------------------------------------------------
 
-var DATA = {}; // holds the fetched data from the server
-var DATA_INIT_STATUS = 0; // status 0: nothing done, 1:
+/**
+ * Holds the fetched data from the server
+ * @type {Array&lt;object>}
+ */
+var DATA = {};
+/**
+ * Data initialization status 
+ * @type {number}
+ */
+var DATA_INIT_STATUS = 0; 
 
+/**
+ * Count of fetch data pending
+ * @type {number}
+ */
 var FETCH_DATA_PENDING = 0;
+
+/**
+ * Variables initialization done status 
+ * @type {boolean}
+ */
 var INIT_STATUS_VARIABLES_DONE = false;
 
-var DataFetchingProcessCount = 0; // (AMELIORATION PAS UTILISÉ)
+/**
+ * Count of data fetching process
+ * @type {number}
+ */
+var DataFetchingProcessCount = 0;
 
 
 // Data's dates :
+/**
+ * Data out of date - would be used to display an error notification
+ * @type {boolean}
+ */
 var DATA_OUT_OF_DATE = false;
+
+/**
+ * Last data timestamp
+ * @type {number}
+ */
 var DATA_TO_TIMESTAMP = 0;
-var DATA_FROM_TIMESTAMP = 0; // DERNIERE DONNÉE ENTRÉE
+
+/**
+ * First data timestamp
+ * @type {number}
+ */
+var DATA_FROM_TIMESTAMP = 0; 
+
+/**
+ * First data timestamp to display 
+ * @type {number}
+ */
 var DATA_DISPLAY_FROM_TIMESTAMP = -1;
+
+/**
+ * Last data timestamp to display 
+ * @type {number}
+ */
 var DATA_DISPLAY_TO_TIMESTAMP = -1;
 
-// Data Window
+/**
+ * Interval of time between the first data timestamp and the last one in milliseconds
+ * @type {number}
+ */
 var DATA_DISPLAY_WINDOW = 20*60*1000;
 
 // Data Time
-var DATA_BUFFER_SIZE = 300*60*1000; // size of the data buffer in ms
+/**
+ * Size of the data buffer in milliseconds
+ * @type {number}
+ */
+var DATA_BUFFER_SIZE = 300*60*1000;
+
+/**
+ * Response timeout while retrieving data
+ * @type {number}
+ */
 var FETCH_DATA_TIMEOUT = 5000;
 
 // List of Datas
+/**
+ * List of all the variables keys
+ * @type {Array&lt;number>}
+ */
 var VARIABLE_KEYS = [];
+
+/**
+ * List of variables property keys
+ * @type {Array&lt;number>}
+ */
 var VARIABLE_PROPERTY_KEYS = [];
+
+/**
+ * List of variable status from keys
+ * @type {Array&lt;string>}
+ */
 var STATUS_VARIABLE_KEYS = {count:function(){var c = 0;for (var key in this){c++;} return c-2;},keys:function(){var k = [];for (var key in this){if (key !=="keys" &amp;&amp; key !=="count"){k.push(key);}} return k;}};
 
+/**
+ * List of variables properties
+ * @type {Array&lt;object>}
+ */
 var VARIABLE_PROPERTIES = {};
+
+/**
+ * List of variable data
+ * @type {Array&lt;object>}
+ */
 var VARIABLE_PROPERTIES_DATA = {};
+
+/**
+ * Historic of last modified variable properties
+ * @type {Array&lt;object>}
+ */
 var VARIABLE_PROPERTIES_LAST_MODIFIED = {};
 
 
@@ -156,8 +370,9 @@ var VARIABLE_PROPERTIES_LAST_MODIFIED = {};
 
 /**
  * Adding fetched data
- * @param {number} key 
- * @param {*} value 
+ * @param {number} key Index used to fetch the data in 'DATA[]'
+ * @param {*} value The data
+ * @returns void
  */
 function add_fetched_data(key,value){
 
@@ -261,10 +476,10 @@ function add_fetched_data(key,value){
 // TIME :
 
 /**
- * Timestamp Conversion 
- * @param {number} id 
+ * Timestamp Conversion from data
+ * @param {number} id Data id
  * @param {*} val 
- * @returns {string} 
+ * @returns {string} Return a date
  */
 function timestamp_conversion(id,val){
     if ($(".variable-config[data-timestamp-conversion][data-id=" + id + "]").attr('data-timestamp-conversion') == 1){
@@ -281,8 +496,8 @@ function timestamp_conversion(id,val){
 }
 /**
  * Convert milliseconds into time format
- * @param {*} duration 
- * @returns {string}
+ * @param {*} duration Time to convert
+ * @returns {string} Return a time like string
  */
 function msToTime(duration) {
     var milliseconds = parseInt(duration % 1000),
@@ -307,10 +522,10 @@ function msToTime(duration) {
 
 
 /**
- * Returns data type of val in the data dictionnary
- * @param {number} id 
- * @param {number|boolean} val 
- * @returns {*}
+ * As data can take multiple format, we have to use a data dictionnary
+ * @param {number} id Data id
+ * @param {number|boolean} val Data format
+ * @returns {*} Returns data type of 'val' in the data dictionnary
  */
 function dictionary(id,val){
     if ($(".variable-config[data-dictionary][data-id=" + id + "]").attr('data-dictionary')){
@@ -329,8 +544,9 @@ function dictionary(id,val){
 
 /**
  * Return id's variable's color
- * @param {number} id 
+ * @param {number} id Variable id
  * @param {boolean} val 
+ * @returns {jQuery}
  */
 function update_data_colors(id,val){
     // variable colors
@@ -429,10 +645,10 @@ function update_data_colors(id,val){
 //                             -----------------------------------------------------------
 
 /**
- * Update variable data values 
- * @param {number} key 
- * @param {*} val 
- * @param {number} time 
+ * Update variable data values and refresh logo
+ * @param {number} key Data id to update
+ * @param {*} val The new data
+ * @param {number} time The timestamp
  */
 function update_data_values(key,val,time){
 
@@ -607,7 +823,7 @@ function update_data_values(key,val,time){
 
             }
             if ($(".variable-config[data-color-type][data-id=" + $(".control-item.type-numeric." + key)[i].id + "]").attr('data-color-type') != 0 &amp;&amp; $(".variable-config[data-color-mode][data-id=" + $(".control-item.type-numeric." + key)[i].id + "]").attr('data-color-mode') != 0){
-                $("#" + $(".control-item.type-numeric." + key)[i].id).css("background-color", update_data_colors($(".control-item.type-numeric." + key)[i].id,val))
+                $("#" + $(".control-item.type-numeric." + key)[i].id).css("background-color", update_data_colors($(".control-item.type-numeric." + key)[i].id,val));
             }
         }
     }
@@ -636,8 +852,8 @@ function update_data_values(key,val,time){
 
 
 /**
- * Update DATA, by erasing datas which are out of date
- * @param {number} key 
+ * Update 'DATA', by erasing datas which are out of date
+ * @param {number} key Data id to update
  */
 function check_buffer(key){
     if ((DATA[key][0][0] &lt; DATA_FROM_TIMESTAMP)){
@@ -744,11 +960,11 @@ function data_handler(){
 
 /**
  * Send data to the Data handler
- * @param {boolean} init 
- * @param {Array&lt;number>} variable_keys 
- * @param {Array&lt;*>} variable_property_keys 
- * @param {number} timestamp_from 
- * @param {number} timestamp_to 
+ * @param {boolean} init Show update status or not
+ * @param {Array&lt;number>} variable_keys List of variables to update
+ * @param {Array&lt;*>} variable_property_keys List of variable properties to update
+ * @param {number} timestamp_from Update data from this timestamp
+ * @param {number} timestamp_to Update data to this timestamp
  */
 function data_handler_ajax(init,variable_keys,variable_property_keys,timestamp_from,timestamp_to){
     show_update_status();
@@ -769,7 +985,7 @@ function data_handler_ajax(init,variable_keys,variable_property_keys,timestamp_f
 
 
 /**
- * Update DATA and Charts
+ * Update DATA and Charts when initialization is done
  * @param {Array&lt;*>} fetched_data 
  */
 function data_handler_done(fetched_data){
@@ -934,9 +1150,9 @@ function data_handler_fail(x, t, m) {
 
 /**
  * Return index 'i' where a value in 'a' is lower or equal to value 't'
- * @param {Array} a 
- * @param {number} t 
- * @returns {number} The index
+ * @param {Array} a The array
+ * @param {number} t The value
+ * @returns {number} The index where a value lower than 't' where found
  */
 function find_index(a,t){
     var i = a.length; //or 10
@@ -948,10 +1164,10 @@ function find_index(a,t){
 }
 /**
  * Return index 'i' where a value in 'd' is lower or equal to value 't'
- * @param {Array} a 
- * @param {number} t 
- * @param {number} d 
- * @returns {number} The index
+ * @param {Array} a The array
+ * @param {number} t The value
+ * @param {number} d Sub index
+ * @returns {number} The index where a value lower than 't' where found
  */
 function find_index_sub_lte(a,t,d){
     var i = a.length; //or 10
@@ -963,10 +1179,10 @@ function find_index_sub_lte(a,t,d){
 }
 /**
  * Return index 'i' where a value in 'd' is superior or equal to value 't'
- * @param {Array} a 
- * @param {number} t 
- * @param {number} d 
- * @returns {number} The index
+ * @param {Array} a The array
+ * @param {number} t The value
+ * @param {number} d Sub index
+ * @returns {number} The index where a value superior than 't' where found
  */
 function find_index_sub_gte(a,t,d){
     var i = 0; //or 10
@@ -992,9 +1208,9 @@ function find_index_sub_gte(a,t,d){
 // COLOR OBJECT :
 /**
  * Color class
- * @param {number} red 
- * @param {number} green 
- * @param {number} blue 
+ * @param {number} red red color between 0 and 255
+ * @param {number} green green color between 0 and 255
+ * @param {number} blue blue color between 0 and 255
  */
 function Color(red,green,blue) {
     this.red = red;
@@ -1005,10 +1221,10 @@ function Color(red,green,blue) {
 // CHARTS OBJETCS :
 
 /**
- * a chart with x y axes, with logarithmic mode
+ * A chart with x and y axes, with logarithmic mode
  * @param {number} id The container id where to display the chart
  * @param {boolean} xaxisVarId 
- * @param {boolean} xaxisLinLog 
+ * @param {boolean} xaxisLinLog Logarithmic mode
  */
 function PyScadaPlot(id, xaxisVarId, xaxisLinLog){
     var options = {
@@ -3597,13 +3813,13 @@ $( document ).ready(function() {
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#add_fetched_data">add_fetched_data</a></li><li><a href="global.html#check_buffer">check_buffer</a></li><li><a href="global.html#Color">Color</a></li><li><a href="global.html#data_handler">data_handler</a></li><li><a href="global.html#data_handler_ajax">data_handler_ajax</a></li><li><a href="global.html#data_handler_done">data_handler_done</a></li><li><a href="global.html#data_handler_fail">data_handler_fail</a></li><li><a href="global.html#dictionary">dictionary</a></li><li><a href="global.html#find_index">find_index</a></li><li><a href="global.html#find_index_sub_gte">find_index_sub_gte</a></li><li><a href="global.html#find_index_sub_lte">find_index_sub_lte</a></li><li><a href="global.html#msToTime">msToTime</a></li><li><a href="global.html#PyScadaPlot">PyScadaPlot</a></li><li><a href="global.html#timestamp_conversion">timestamp_conversion</a></li><li><a href="global.html#update_data_colors">update_data_colors</a></li><li><a href="global.html#update_data_values">update_data_values</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#add_fetched_data">add_fetched_data</a></li><li><a href="global.html#AUTO_UPDATE_ACTIVE">AUTO_UPDATE_ACTIVE</a></li><li><a href="global.html#CACHE_TIMEOUT">CACHE_TIMEOUT</a></li><li><a href="global.html#CHART_VARIABLE_KEYS">CHART_VARIABLE_KEYS</a></li><li><a href="global.html#check_buffer">check_buffer</a></li><li><a href="global.html#Color">Color</a></li><li><a href="global.html#CSRFTOKEN">CSRFTOKEN</a></li><li><a href="global.html#DATA">DATA</a></li><li><a href="global.html#DATA_BUFFER_SIZE">DATA_BUFFER_SIZE</a></li><li><a href="global.html#DATA_DISPLAY_FROM_TIMESTAMP">DATA_DISPLAY_FROM_TIMESTAMP</a></li><li><a href="global.html#DATA_DISPLAY_TO_TIMESTAMP">DATA_DISPLAY_TO_TIMESTAMP</a></li><li><a href="global.html#DATA_DISPLAY_WINDOW">DATA_DISPLAY_WINDOW</a></li><li><a href="global.html#DATA_FROM_TIMESTAMP">DATA_FROM_TIMESTAMP</a></li><li><a href="global.html#data_handler">data_handler</a></li><li><a href="global.html#data_handler_ajax">data_handler_ajax</a></li><li><a href="global.html#data_handler_done">data_handler_done</a></li><li><a href="global.html#data_handler_fail">data_handler_fail</a></li><li><a href="global.html#DATA_INIT_STATUS">DATA_INIT_STATUS</a></li><li><a href="global.html#DATA_OUT_OF_DATE">DATA_OUT_OF_DATE</a></li><li><a href="global.html#DATA_OUT_OF_DATE_ALERT_ID">DATA_OUT_OF_DATE_ALERT_ID</a></li><li><a href="global.html#DATA_TO_TIMESTAMP">DATA_TO_TIMESTAMP</a></li><li><a href="global.html#DataFetchingProcessCount">DataFetchingProcessCount</a></li><li><a href="global.html#daterange_format">daterange_format</a></li><li><a href="global.html#debug">debug</a></li><li><a href="global.html#dictionary">dictionary</a></li><li><a href="global.html#FETCH_DATA_PENDING">FETCH_DATA_PENDING</a></li><li><a href="global.html#FETCH_DATA_TIMEOUT">FETCH_DATA_TIMEOUT</a></li><li><a href="global.html#find_index">find_index</a></li><li><a href="global.html#find_index_sub_gte">find_index_sub_gte</a></li><li><a href="global.html#find_index_sub_lte">find_index_sub_lte</a></li><li><a href="global.html#INIT_CHART_VARIABLES_COUNT">INIT_CHART_VARIABLES_COUNT</a></li><li><a href="global.html#INIT_CHART_VARIABLES_DONE">INIT_CHART_VARIABLES_DONE</a></li><li><a href="global.html#INIT_STATUS_COUNT">INIT_STATUS_COUNT</a></li><li><a href="global.html#INIT_STATUS_VARIABLES_DONE">INIT_STATUS_VARIABLES_DONE</a></li><li><a href="global.html#JSON_ERROR_COUNT">JSON_ERROR_COUNT</a></li><li><a href="global.html#LAST_QUERY_TIME">LAST_QUERY_TIME</a></li><li><a href="global.html#loading_labels">loading_labels</a></li><li><a href="global.html#LOADING_PAGE_DONE">LOADING_PAGE_DONE</a></li><li><a href="global.html#loading_percent">loading_percent</a></li><li><a href="global.html#loading_states">loading_states</a></li><li><a href="global.html#LOG_FETCH_PENDING_COUNT">LOG_FETCH_PENDING_COUNT</a></li><li><a href="global.html#LOG_LAST_TIMESTAMP">LOG_LAST_TIMESTAMP</a></li><li><a href="global.html#msToTime">msToTime</a></li><li><a href="global.html#NOTIFICATION_COUNT">NOTIFICATION_COUNT</a></li><li><a href="global.html#PREVIOUS_AUTO_UPDATE_ACTIVE_STATE">PREVIOUS_AUTO_UPDATE_ACTIVE_STATE</a></li><li><a href="global.html#PREVIOUS_END_DATE">PREVIOUS_END_DATE</a></li><li><a href="global.html#progressbar_resize_active">progressbar_resize_active</a></li><li><a href="global.html#PyScadaPlot">PyScadaPlot</a></li><li><a href="global.html#PyScadaPlots">PyScadaPlots</a></li><li><a href="global.html#REFRESH_RATE">REFRESH_RATE</a></li><li><a href="global.html#ROOT_URL">ROOT_URL</a></li><li><a href="global.html#SERVER_TIME">SERVER_TIME</a></li><li><a href="global.html#STATUS_VARIABLE_KEYS">STATUS_VARIABLE_KEYS</a></li><li><a href="global.html#timestamp_conversion">timestamp_conversion</a></li><li><a href="global.html#update_data_colors">update_data_colors</a></li><li><a href="global.html#update_data_values">update_data_values</a></li><li><a href="global.html#UPDATE_STATUS_COUNT">UPDATE_STATUS_COUNT</a></li><li><a href="global.html#UPDATE_X_AXES_TIME_LINE_STATUS">UPDATE_X_AXES_TIME_LINE_STATUS</a></li><li><a href="global.html#VARIABLE_KEYS">VARIABLE_KEYS</a></li><li><a href="global.html#VARIABLE_PROPERTIES">VARIABLE_PROPERTIES</a></li><li><a href="global.html#VARIABLE_PROPERTIES_DATA">VARIABLE_PROPERTIES_DATA</a></li><li><a href="global.html#VARIABLE_PROPERTIES_LAST_MODIFIED">VARIABLE_PROPERTIES_LAST_MODIFIED</a></li><li><a href="global.html#VARIABLE_PROPERTY_KEYS">VARIABLE_PROPERTY_KEYS</a></li><li><a href="global.html#version">version</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.10</a> on Thu May 05 2022 16:25:44 GMT+0200 (heure d’été d’Europe centrale)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.10</a> on Fri May 06 2022 15:48:21 GMT+0200 (heure d’été d’Europe centrale)
 </footer>
 
 <script> prettyPrint(); </script>

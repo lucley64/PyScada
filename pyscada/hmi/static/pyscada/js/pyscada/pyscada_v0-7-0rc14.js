@@ -18,64 +18,193 @@ Licensed under the GPL.
 //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-
+/**
+ * Script's version
+ * @type {string}
+ */
 var version = "0.7.0rc23";
+
+/**
+ * Date format : day/month/year hours:minutes:seconds
+ * @type {string}
+ */
 var daterange_format = "DD/MM/YYYY HH:mm:ss";
 
 //                             -----------------------------------------------------------
 //                                             Client-Server's Variables
 //                             -----------------------------------------------------------
-
-var LOADING_PAGE_DONE = 0; // 0 = not loaded / 1 = loaded
-
-var debug = 0; // (AMELIORATION PAS UTILISÉ)
+/**
+ * Loading page state - 0 = not loaded / 1 = loaded
+ * @type {boolean}
+ */
+var LOADING_PAGE_DONE = 0; 
+/**
+ * ???
+ */
+var debug = 0; 
 
 
 // Loadings :
-var loading_percent = 0; // (AMELIORATION PAS UTILISÉ)
-var loading_states = {}; // all recorded loading states
-var loading_labels = {0:'CSS: ', 1:'Loading javascript: ', 4:'Loading static variables: ', 5:'Loading chart variables: ',}; // current loading state
+/**
+ * Loading percentage
+ * @type {number}
+ */
+var loading_percent = 0; 
+
+/**
+ * All recorded loading states
+ * @type {number}
+ */
+var loading_states = {}; 
+
+/**
+ * Current loading state
+ * @type {string}
+ */
+var loading_labels = {0:'CSS: ', 1:'Loading javascript: ', 4:'Loading static variables: ', 5:'Loading chart variables: ',}; 
 
 // Ajax :
+/**
+ * Count of all the JSON errors - used for errors notification.
+ * @type {number}
+ */
 var JSON_ERROR_COUNT = 0;
+
+/**
+ * Current server time
+ * @type {number}
+ */
 var SERVER_TIME = 0;
+
+/**
+ * Last recorded query time
+ * @type {number}
+ */
 var LAST_QUERY_TIME = 0; 
+
+/**
+ * Token used for the ajax setup
+ * @type {string}
+ */
 var CSRFTOKEN = $.cookie('csrftoken');
+
+/**
+ * Refresh rate in milliseconds - used to update data
+ * @type {number}
+ */
 var REFRESH_RATE = 2500;
-var CACHE_TIMEOUT = 15000; // in milliseconds (AMELIORATION)    
+
+/**
+ * Cache timeout in milliseconds
+ * @type {number}
+ */
+var CACHE_TIMEOUT = 15000; 
+
+/**
+ * Root's url - used to locate pyscada elements
+ * @type {string}
+ */
 var ROOT_URL = window.location.protocol+"//"+window.location.host + "/";
 
 // Log :
+/**
+ * Log's last timestamp - Collect the data last timestamp
+ * @type {number}
+ */
 var LOG_LAST_TIMESTAMP = 0;
+
+/**
+ * Count of fetching data pending
+ * @type {boolean}
+ */
 var LOG_FETCH_PENDING_COUNT = false;
 
 // Status :
+/**
+ * Chart initialization status count -
+ * @type {number}
+ */
 var INIT_STATUS_COUNT = 0;
+
+/**
+ * Chart update status count
+ * @type {number}
+ */
 var UPDATE_STATUS_COUNT = 0;
+
+/**
+ * Auto chart's data update button active
+ * @type {boolean}
+ */
 var AUTO_UPDATE_ACTIVE = true;
+
+/**
+ * Previous auto chart's data update button active
+ * @type {boolean}
+ */
 var PREVIOUS_AUTO_UPDATE_ACTIVE_STATE = false;
+
+/**
+ * Last end date 
+ * @type {number}
+ */
 var PREVIOUS_END_DATE = 0;
 
 // Notifications :
+/**
+ * Count of all displayed notification 
+ * @type {number}
+ */
 var NOTIFICATION_COUNT = 0;
+
+/**
+ * Id of the 'data out of date' error notification to display
+ * @type {number}
+ */
 var DATA_OUT_OF_DATE_ALERT_ID = '';
 
 
 //                             -----------------------------------------------------------
 //                                                      Objects
 //                             -----------------------------------------------------------
-
+/**
+ * Chart's variables initialization count 
+ * @type {number}
+ */
 var INIT_CHART_VARIABLES_COUNT = 0;
+
+/**
+ * Chart's variables initialization state
+ * @type {boolean}
+ */
 var INIT_CHART_VARIABLES_DONE = false;
 
 
 // List of Charts
+/**
+ * List of chart's variables keys 
+ * @type {Array<number>}
+ */
 var CHART_VARIABLE_KEYS = {count:function(){var c = 0;for (var key in this){c++;} return c-2;},keys:function(){var k = [];for (var key in this){if (key !=="keys" && key !=="count"){k.push(key);}} return k;}};
 
 // Plot :
-var PyScadaApex = []
+
+/**
+ * List of all the chart to display
+ * @type {Array<object>}
+ */
 var PyScadaPlots = [];
+
+/**
+ * X axe's progress bar resize function state
+ * @type {boolean}
+ */
 var progressbar_resize_active = false;
+
+/**
+ * Update chart's x axes time line status 
+ * @type {boolean}
+ */
 var UPDATE_X_AXES_TIME_LINE_STATUS = true;
 
 
@@ -83,36 +212,121 @@ var UPDATE_X_AXES_TIME_LINE_STATUS = true;
 //                                                  Data's Variables
 //                             -----------------------------------------------------------
 
-var DATA = {}; // holds the fetched data from the server
-var DATA_INIT_STATUS = 0; // status 0: nothing done, 1:
+/**
+ * Holds the fetched data from the server
+ * @type {Array<object>}
+ */
+var DATA = {};
+/**
+ * Data initialization status 
+ * @type {number}
+ */
+var DATA_INIT_STATUS = 0; 
 
+/**
+ * Count of fetch data pending
+ * @type {number}
+ */
 var FETCH_DATA_PENDING = 0;
+
+/**
+ * Variables initialization done status 
+ * @type {boolean}
+ */
 var INIT_STATUS_VARIABLES_DONE = false;
 
-var DataFetchingProcessCount = 0; // (AMELIORATION PAS UTILISÉ)
+/**
+ * Count of data fetching process
+ * @type {number}
+ */
+var DataFetchingProcessCount = 0;
 
 
 // Data's dates :
+/**
+ * Data out of date - would be used to display an error notification
+ * @type {boolean}
+ */
 var DATA_OUT_OF_DATE = false;
+
+/**
+ * Last data timestamp
+ * @type {number}
+ */
 var DATA_TO_TIMESTAMP = 0;
-var DATA_FROM_TIMESTAMP = 0; // DERNIERE DONNÉE ENTRÉE
+
+/**
+ * First data timestamp
+ * @type {number}
+ */
+var DATA_FROM_TIMESTAMP = 0; 
+
+/**
+ * First data timestamp to display 
+ * @type {number}
+ */
 var DATA_DISPLAY_FROM_TIMESTAMP = -1;
+
+/**
+ * Last data timestamp to display 
+ * @type {number}
+ */
 var DATA_DISPLAY_TO_TIMESTAMP = -1;
 
-// Data Window
+/**
+ * Interval of time between the first data timestamp and the last one in milliseconds
+ * @type {number}
+ */
 var DATA_DISPLAY_WINDOW = 20*60*1000;
 
 // Data Time
-var DATA_BUFFER_SIZE = 300*60*1000; // size of the data buffer in ms
+/**
+ * Size of the data buffer in milliseconds
+ * @type {number}
+ */
+var DATA_BUFFER_SIZE = 300*60*1000;
+
+/**
+ * Response timeout while retrieving data
+ * @type {number}
+ */
 var FETCH_DATA_TIMEOUT = 5000;
 
 // List of Datas
+/**
+ * List of all the variables keys
+ * @type {Array<number>}
+ */
 var VARIABLE_KEYS = [];
+
+/**
+ * List of variables property keys
+ * @type {Array<number>}
+ */
 var VARIABLE_PROPERTY_KEYS = [];
+
+/**
+ * List of variable status from keys
+ * @type {Array<string>}
+ */
 var STATUS_VARIABLE_KEYS = {count:function(){var c = 0;for (var key in this){c++;} return c-2;},keys:function(){var k = [];for (var key in this){if (key !=="keys" && key !=="count"){k.push(key);}} return k;}};
 
+/**
+ * List of variables properties
+ * @type {Array<object>}
+ */
 var VARIABLE_PROPERTIES = {};
+
+/**
+ * List of variable data
+ * @type {Array<object>}
+ */
 var VARIABLE_PROPERTIES_DATA = {};
+
+/**
+ * Historic of last modified variable properties
+ * @type {Array<object>}
+ */
 var VARIABLE_PROPERTIES_LAST_MODIFIED = {};
 
 
@@ -128,8 +342,9 @@ var VARIABLE_PROPERTIES_LAST_MODIFIED = {};
 
 /**
  * Adding fetched data
- * @param {number} key 
- * @param {*} value 
+ * @param {number} key Index used to fetch the data in 'DATA[]'
+ * @param {*} value The data
+ * @returns void
  */
 function add_fetched_data(key,value){
 
@@ -233,10 +448,10 @@ function add_fetched_data(key,value){
 // TIME :
 
 /**
- * Timestamp Conversion 
- * @param {number} id 
+ * Timestamp Conversion from data
+ * @param {number} id Data id
  * @param {*} val 
- * @returns {string} 
+ * @returns {string} Return a date
  */
 function timestamp_conversion(id,val){
     if ($(".variable-config[data-timestamp-conversion][data-id=" + id + "]").attr('data-timestamp-conversion') == 1){
@@ -253,8 +468,8 @@ function timestamp_conversion(id,val){
 }
 /**
  * Convert milliseconds into time format
- * @param {*} duration 
- * @returns {string}
+ * @param {*} duration Time to convert
+ * @returns {string} Return a time string like
  */
 function msToTime(duration) {
     var milliseconds = parseInt(duration % 1000),
@@ -279,10 +494,10 @@ function msToTime(duration) {
 
 
 /**
- * Returns data type of val in the data dictionnary
- * @param {number} id 
- * @param {number|boolean} val 
- * @returns {*}
+ * As data can take multiple format, we have to use a data dictionnary
+ * @param {number} id Data id
+ * @param {number|boolean} val Data format
+ * @returns {*} Returns data type of 'val' in the data dictionnary
  */
 function dictionary(id,val){
     if ($(".variable-config[data-dictionary][data-id=" + id + "]").attr('data-dictionary')){
@@ -301,8 +516,9 @@ function dictionary(id,val){
 
 /**
  * Return id's variable's color
- * @param {number} id 
+ * @param {number} id Variable id
  * @param {boolean} val 
+ * @returns {jQuery}
  */
 function update_data_colors(id,val){
     // variable colors
@@ -401,10 +617,10 @@ function update_data_colors(id,val){
 //                             -----------------------------------------------------------
 
 /**
- * Update variable data values 
- * @param {number} key 
- * @param {*} val 
- * @param {number} time 
+ * Update variable data values and refresh logo
+ * @param {number} key Data id to update
+ * @param {*} val The new data
+ * @param {number} time The timestamp
  */
 function update_data_values(key,val,time){
 
@@ -579,7 +795,7 @@ function update_data_values(key,val,time){
 
             }
             if ($(".variable-config[data-color-type][data-id=" + $(".control-item.type-numeric." + key)[i].id + "]").attr('data-color-type') != 0 && $(".variable-config[data-color-mode][data-id=" + $(".control-item.type-numeric." + key)[i].id + "]").attr('data-color-mode') != 0){
-                $("#" + $(".control-item.type-numeric." + key)[i].id).css("background-color", update_data_colors($(".control-item.type-numeric." + key)[i].id,val))
+                $("#" + $(".control-item.type-numeric." + key)[i].id).css("background-color", update_data_colors($(".control-item.type-numeric." + key)[i].id,val));
             }
         }
     }
@@ -608,8 +824,8 @@ function update_data_values(key,val,time){
 
 
 /**
- * Update DATA, by erasing datas which are out of date
- * @param {number} key 
+ * Update 'DATA', by erasing datas which are out of date
+ * @param {number} key Data id to update
  */
 function check_buffer(key){
     if ((DATA[key][0][0] < DATA_FROM_TIMESTAMP)){
@@ -716,11 +932,11 @@ function data_handler(){
 
 /**
  * Send data to the Data handler
- * @param {boolean} init 
- * @param {Array<number>} variable_keys 
- * @param {Array<*>} variable_property_keys 
- * @param {number} timestamp_from 
- * @param {number} timestamp_to 
+ * @param {boolean} init Show update status or not
+ * @param {Array<number>} variable_keys List of variables to update
+ * @param {Array<*>} variable_property_keys List of variable properties to update
+ * @param {number} timestamp_from Update data from this timestamp
+ * @param {number} timestamp_to Update data to this timestamp
  */
 function data_handler_ajax(init,variable_keys,variable_property_keys,timestamp_from,timestamp_to){
     show_update_status();
@@ -741,7 +957,7 @@ function data_handler_ajax(init,variable_keys,variable_property_keys,timestamp_f
 
 
 /**
- * Update DATA and Charts
+ * Update DATA and Charts when initialization is done
  * @param {Array<*>} fetched_data 
  */
 function data_handler_done(fetched_data){
@@ -906,9 +1122,9 @@ function data_handler_fail(x, t, m) {
 
 /**
  * Return index 'i' where a value in 'a' is lower or equal to value 't'
- * @param {Array} a 
- * @param {number} t 
- * @returns {number} The index
+ * @param {Array} a The array
+ * @param {number} t The value
+ * @returns {number} The index where a value lower than 't' where found
  */
 function find_index(a,t){
     var i = a.length; //or 10
@@ -920,10 +1136,10 @@ function find_index(a,t){
 }
 /**
  * Return index 'i' where a value in 'd' is lower or equal to value 't'
- * @param {Array} a 
- * @param {number} t 
- * @param {number} d 
- * @returns {number} The index
+ * @param {Array} a The array
+ * @param {number} t The value
+ * @param {number} d Sub index
+ * @returns {number} The index where a value lower than 't' where found
  */
 function find_index_sub_lte(a,t,d){
     var i = a.length; //or 10
@@ -935,10 +1151,10 @@ function find_index_sub_lte(a,t,d){
 }
 /**
  * Return index 'i' where a value in 'd' is superior or equal to value 't'
- * @param {Array} a 
- * @param {number} t 
- * @param {number} d 
- * @returns {number} The index
+ * @param {Array} a The array
+ * @param {number} t The value
+ * @param {number} d Sub index
+ * @returns {number} The index where a value superior than 't' where found
  */
 function find_index_sub_gte(a,t,d){
     var i = 0; //or 10
@@ -964,9 +1180,9 @@ function find_index_sub_gte(a,t,d){
 // COLOR OBJECT :
 /**
  * Color class
- * @param {number} red 
- * @param {number} green 
- * @param {number} blue 
+ * @param {number} red red color between 0 and 255
+ * @param {number} green green color between 0 and 255
+ * @param {number} blue blue color between 0 and 255
  */
 function Color(red,green,blue) {
     this.red = red;
@@ -977,10 +1193,10 @@ function Color(red,green,blue) {
 // CHARTS OBJETCS :
 
 /**
- * a chart with x y axes, with logarithmic mode
+ * A chart with x and y axes, with logarithmic mode
  * @param {number} id The container id where to display the chart
  * @param {boolean} xaxisVarId 
- * @param {boolean} xaxisLinLog 
+ * @param {boolean} xaxisLinLog Logarithmic mode
  */
 function PyScadaPlot(id, xaxisVarId, xaxisLinLog){
     var options = {
@@ -1671,6 +1887,13 @@ function PyScadaPlot(id, xaxisVarId, xaxisLinLog){
     }
 }
 // Gauge
+/**
+ * A 240° circular chart with a data range
+ * @param {number} id The container id where to display the chart
+ * @param {numer} min_value Range minimum value
+ * @param {number} max_value Range maximum value
+ * @param {Array<object>} threshold_values Datas
+ */
 function Gauge(id, min_value, max_value, threshold_values){
     var options = {
         series: {
@@ -1767,7 +1990,7 @@ function Gauge(id, min_value, max_value, threshold_values){
             // draw the chart if we have data
             if (series.length > 0) {
                 var plotCanvas = $('<div></div>');
-                elem = $(chart_container_id + ' .chart-placeholder')
+                elem = $(chart_container_id + ' .chart-placeholder');
                 
                 //mhw = Math.min(elem.parent().height() * 1.3, elem.parent().width());
                 mhw = elem.parent().width();
@@ -1803,8 +2026,13 @@ function Gauge(id, min_value, max_value, threshold_values){
         }
     }
 }
-// Bar - A Distributed Columns chart which display datas from one to multiple variables.
-// Bar requires data, an id ( used to display the chart in the right HTML element ), and a minimal and maximum value for y axe.
+// Bar
+/**
+ * A Distributed Columns chart which display datas from one to multiple variables.
+ * @param {number} id The container id where to display the chart
+ * @param {number} min The y axe minimum value
+ * @param {numer} max The y axe maximum value
+ */
 function Bar(id, min, max){
     var options = {
         series: [{
@@ -2026,7 +2254,13 @@ function Bar(id, min, max){
     function resize() {
     }
 }
-// Pie - chart with radius and innierRadius options
+// Pie
+/**
+ * A chart with radius and innierRadius options
+ * @param {number} id The container id where to display the chart
+ * @param {number} radius The pie radius
+ * @param {number} innerRadius The pie inner radius
+ */
 function Pie(id, radius, innerRadius){
     var options = {
         series: {
@@ -2215,6 +2449,10 @@ function Pie(id, radius, innerRadius){
 //                             -----------------------------------------------------------
 
 // CHART SELECTION :
+/**
+ * Depending on the checked check box, zoom x or y activated for each x y axes chart
+ * @returns void
+ */
 function set_chart_selection_mode(){
 
     // ZOOM MODE :
@@ -2259,7 +2497,11 @@ function set_chart_selection_mode(){
 }
 
 
-// X AXES - for each chart container, update charts then update timeline :
+// X AXES
+/**
+ * For each chart container, update charts then update timeline
+ * @returns void
+ */
 function set_x_axes(){
     if(!progressbar_resize_active){
         $.each(PyScadaPlots,function(plot_id){
@@ -2274,7 +2516,11 @@ function set_x_axes(){
 }
 
 
-// UPDATE TIMELINE - update the timeline axe depending on data timestamp variables
+// UPDATE TIMELINE
+/**
+ * Update the timeline axe depending on data timestamp variables
+ * @returns void
+ */
 function update_timeline(){
     if (DATA_DISPLAY_TO_TIMESTAMP < 0){
         $('#timeline-time-to-label').html("");
@@ -2318,6 +2564,12 @@ function update_timeline(){
 // CROSSHAIRS :
 
 // Set Crosshairs
+/**
+ * Set crosshairs on 'flotPlot'
+ * @param {object} flotPlot The chart 
+ * @param {*} id 
+ * @returns void
+ */
 function setCrosshairs(flotPlot, id) {
     //test if function setCrosshairs exist in hooks.drawOverlay before add it
     $('.chart-legend-value-' + id).removeClass('type-numeric');
@@ -2330,13 +2582,13 @@ function setCrosshairs(flotPlot, id) {
                     $('.chart-legend-value-' + PyScadaPlots[plot_id].getId()).removeClass('type-numeric');
                     setTimeout(PyScadaPlots[plot_id].updateLegend(), 50);
                     if (PyScadaPlots[plot_id].getId() == id) {
-                        PyScadaPlots[plot_id].getFlotObject().getOptions().crosshair.mode = 'xy'
+                        PyScadaPlots[plot_id].getFlotObject().getOptions().crosshair.mode = 'xy';
                     }else {
-                        PyScadaPlots[plot_id].getFlotObject().getOptions().crosshair.mode = 'x'
+                        PyScadaPlots[plot_id].getFlotObject().getOptions().crosshair.mode = 'x';
                     }
                 }else {
                     PyScadaPlots[plot_id].getFlotObject().setCrosshair();
-                    PyScadaPlots[plot_id].getFlotObject().getOptions().crosshair.mode = 'xy'
+                    PyScadaPlots[plot_id].getFlotObject().getOptions().crosshair.mode = 'xy';
                     $('.chart-legend-value-' + PyScadaPlots[plot_id].getId()).addClass('type-numeric');
                 }
             }
@@ -2344,16 +2596,26 @@ function setCrosshairs(flotPlot, id) {
     });
 }
 // Delete Crosshairs
+/**
+ * Delete every crosshairs on 'flotPlot'
+ * @param {object} flotPlot The chart
+ * @returns void
+ */
 function delCrosshairs(flotPlot) {
     $.each(PyScadaPlots,function(plot_id){
         if (typeof PyScadaPlots[plot_id].getFlotObject() !== 'undefined') {
             PyScadaPlots[plot_id].getFlotObject().setCrosshair();
-            PyScadaPlots[plot_id].getFlotObject().getOptions().crosshair.mode = 'xy'
+            PyScadaPlots[plot_id].getFlotObject().getOptions().crosshair.mode = 'xy';
         }
         $('.chart-legend-value-' + PyScadaPlots[plot_id].getId()).addClass('type-numeric');
     });
 }
 // Unlock Crosshairs
+/**
+ * Unlock each crosshairs on 'flotPlot'
+ * @param {object} flotPlot The chart
+ * @returns void
+ */
 function unlockCrosshairs(flotPlot) {
     $.each(PyScadaPlots,function(plot_id){
         if (typeof PyScadaPlots[plot_id].getFlotObject() !== 'undefined') {
@@ -2362,6 +2624,9 @@ function unlockCrosshairs(flotPlot) {
     });
 }
 // Lock Crosshairs
+/**
+ * Lock each crosshairs on each chart
+ */
 function lockCrosshairs() {
     $.each(PyScadaPlots,function(plot_id){
         if (typeof PyScadaPlots[plot_id].getFlotObject() !== 'undefined') {
@@ -2372,6 +2637,14 @@ function lockCrosshairs() {
 
 
 // COLOR GRADIENT :
+/**
+ *  Color gradient 
+ * @param {number} fadeFraction 
+ * @param {Color} rgbColor1 
+ * @param {Color} rgbColor2 
+ * @param {Color} rgbColor3 
+ * @returns {string} return a color gradient
+ */
 function colorGradient(fadeFraction, rgbColor1, rgbColor2, rgbColor3) {
     var color1 = rgbColor1;
     var color2 = rgbColor2;
@@ -2417,7 +2690,11 @@ function colorGradient(fadeFraction, rgbColor1, rgbColor2, rgbColor3) {
 //                                                    Page's Settings
 //                             -----------------------------------------------------------
 
-// PADDING - Adapt content padding top on navbar size
+// PADDING
+/**
+ * Adapt content padding top on navbar size
+ * @returns void
+ */
 function set_content_padding_top() {
     navbar_height = $('.navbar-collapse')[0].offsetHeight;
     if (navbar_height > 50) {
