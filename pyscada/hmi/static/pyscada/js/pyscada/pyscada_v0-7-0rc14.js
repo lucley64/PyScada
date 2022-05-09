@@ -133,7 +133,7 @@ var INIT_STATUS_COUNT = 0;
 var UPDATE_STATUS_COUNT = 0;
 
 /**
- * Auto chart's data update button active
+ * Auto chart's data update button status
  * @type {boolean}
  */
 var AUTO_UPDATE_ACTIVE = true;
@@ -627,13 +627,15 @@ function update_data_values(key,val,time){
     // CHECKING 'key' TYPE :
     if (key.split("-")[0] == "var") {type="variable";} else {type="variable_property";}
 
+    var unit = $(".variable-config[data-unit][data-key=" + key.split("-")[1] + "]").attr('data-unit')
+    
     // TIME UPDATE :
     if (time != null) {
         t_last_update = SERVER_TIME - time;
         t_next_update = 1000 * $(".variable-config[data-value-timestamp][data-key=" + key.split("-")[1] + "][data-type=" + type + "]").attr('data-device-polling_interval') - t_last_update;
         t_next_update_string = ((t_next_update < 1000) ? '< 1 sec' : msToTime(t_next_update));
         
-        $(".type-numeric." + key).attr('data-original-title','last update ' + msToTime(t_last_update) + ' ago<br>next update in ' + t_next_update_string);
+        $(".type-numeric." + key).attr('data-original-title','Current value: ' + val + ' ' + unit + '<br>Last update: ' + msToTime(t_last_update) + ' ago<br>Next update: ' + t_next_update_string);
         $(".variable-config[data-value-timestamp][data-key=" + key.split("-")[1] + "][data-type=" + type + "]").attr('data-value-timestamp',time);
         
         polling_interval = $(".variable-config[data-device-polling_interval][data-key=" + key.split("-")[1] + "]").attr('data-device-polling_interval');
@@ -1074,7 +1076,7 @@ function data_handler_done(fetched_data){
 
 
 /**
- * Will display an error notification
+ * Will display an Ajax error notification
  * @param {*} x 
  * @param {*} t 
  * @param {*} m 
@@ -1981,8 +1983,8 @@ function Gauge(id, min_value, max_value, threshold_values){
             // add the selected data series to the "series" variable
             series = [];
             for (var key in keys){
+                key = keys[key];
                 if (key in DATA) {
-                    key = keys[key];
                     data=[[min_value, DATA[key][DATA[key].length - 1][1]]]
                     series.push({"data":data, "label":variables[key].label});
                 }
@@ -2504,12 +2506,7 @@ function set_chart_selection_mode(){
  */
 function set_x_axes(){
     if(!progressbar_resize_active){
-        $.each(PyScadaPlots,function(plot_id){
-            var self = this, doBind = function() {
-                PyScadaPlots[plot_id].update(true);
-            };
-            $.browserQueue.add(doBind, this);
-        });
+        updatePyScadaPlots(true);
         // update the progressbar
         update_timeline();
     }
@@ -2553,13 +2550,30 @@ function update_timeline(){
     //$("#timeline-time-left-label").html(date.toLocaleString());
 
     // Update DateTime pickers
-    daterange_set(moment(DATA_FROM_TIMESTAMP), moment(DATA_TO_TIMESTAMP))
+    if ($("#" + window.location.hash.substr(1) + ".show_daterangepicker").length || $("#" + window.location.hash.substr(1) + ".show_timeline").length) {
+        daterange_set(moment(DATA_FROM_TIMESTAMP), moment(DATA_TO_TIMESTAMP));
+    }
 }
 
 
 //                             -----------------------------------------------------------
 //                                           Charts and Color's Functions
 //                             -----------------------------------------------------------
+
+// UPDATE :
+/**
+ * Draw as many charts as requested
+ * @param {boolean} force 
+ * @returns void
+ */
+function updatePyScadaPlots(force=false) {
+    $.each(PyScadaPlots,function(plot_id){
+        var self = this, doBind = function() {
+            PyScadaPlots[plot_id].update(force);
+        };
+        $.browserQueue.add(doBind, this);
+    });
+}
 
 // CROSSHAIRS :
 
@@ -2711,6 +2725,10 @@ function set_content_padding_top() {
 
 
 // PAGES
+/**
+ * Show page
+ * @returns void
+ */
 function show_page() {
     // hide all pages
     $(".sub-page").hide();
@@ -2724,13 +2742,12 @@ function show_page() {
 
 
 // PROGRESS BAR :
+/**
+ * Set the window progress bar
+ * @returns void
+ */
 function progressbarSetWindow( event, ui ) {
-    $.each(PyScadaPlots,function(plot_id){
-        var self = this, doBind = function() {
-            PyScadaPlots[plot_id].update(false);
-        };
-        $.browserQueue.add(doBind, this);
-    });
+    updatePyScadaPlots(false);
 
     progressbar_resize_active = false;
 }
@@ -2739,6 +2756,10 @@ function progressbarSetWindow( event, ui ) {
 // TIMELINE :
 
 // Timeline Resize
+/**
+ * Resize the timeline if window size changed
+ * @returns void
+ */
 function timeline_resize( event, ui ) {
     var window_width = ui.size.width/($('#timeline-border').width()-10);
     var window_left = ui.position.left/($('#timeline-border').width()-10);
@@ -2767,6 +2788,10 @@ function timeline_resize( event, ui ) {
     update_timeline();
 }
 // Timeline Drag
+/**
+ * ?
+ * @returns void
+ */
 function timeline_drag( event, ui ) {
     var window_left = ui.position.left/($('#timeline-border').width()-10);
     var min_full = (DATA_TO_TIMESTAMP - DATA_FROM_TIMESTAMP);
@@ -2785,12 +2810,48 @@ function timeline_drag( event, ui ) {
     update_timeline();
 }
 
+// toggle daterangepicker :
+/**
+ * Shows or hides date range picker
+ * @returns void
+ */
+function toggle_daterangepicker(){
+    // Show/hide daterangepicker
+    if (window.location.hash.substr(1) !== '') {
+        if ($("#" + window.location.hash.substr(1) + ".show_daterangepicker").length) {
+            $(".daterangepicker_parent").removeClass("hidden");
+        }else {
+            $(".daterangepicker_parent").addClass("hidden");
+        }
+    }
+}
+
+// Shows or hides timeline :
+/**
+ * Toggle timeline
+ * @returns void
+ */
+function toggle_timeline(){
+    // Show/hide timeline
+    if (window.location.hash.substr(1) !== '') {
+        if ($("#" + window.location.hash.substr(1) + ".show_timeline").length) {
+            $(".timeline").removeClass("hidden");
+        }else {
+            $(".timeline").addClass("hidden");
+        }
+    }
+}
 
 //                             -----------------------------------------------------------
 //                                                   Page's Functions
 //                             -----------------------------------------------------------
 
 // FORM :
+/**
+ * Check form value
+ * @param {number} id_form Form to check
+ * @returns {boolean} Return an error status
+ */
 function check_form(id_form) {
 
     err = false;
@@ -2900,11 +2961,20 @@ function check_form(id_form) {
 // INITS :
 
 // Show Init
+/**
+ * Show initialization status
+ * @returns void
+ */
 function show_init_status(){
     //$("#loadingAnimation").show();
     INIT_STATUS_COUNT = INIT_STATUS_COUNT + 1;
 }
+
 // Hide Init
+/**
+ * Hide initialization status
+ * @returns void
+ */
 function hide_init_status(){
     INIT_STATUS_COUNT = INIT_STATUS_COUNT -1;
     if (INIT_STATUS_COUNT <= 0){
@@ -2916,6 +2986,12 @@ function hide_init_status(){
 //LOADINGS :
 
 // Set and Show Loading
+/**
+ * Set and show loading state
+ * @param {number} key Element id where to show the loading state
+ * @param {number} value Value to display
+ * @returns void
+ */
 function set_loading_state(key, value) {
     loading_states[key] = value;
     $('#page-load-label').show();
@@ -2925,7 +3001,12 @@ function set_loading_state(key, value) {
         $('#page-load-state')[0].setAttribute('value', (Number.parseFloat(loading_states[key]).toFixed(2)));
     }
 }
+
 // Hide Loading
+/**
+ * Hide loading state
+ * @returns void
+ */
 function hide_loading_state() {
     $('#page-load-label').hide();
     $('#page-load-state').hide();
@@ -2934,12 +3015,21 @@ function hide_loading_state() {
 // UPDATES :
 
 // Show Status
+/**
+ * Show 'AutoUpdateStatus'
+ * @returns void
+ */
 function show_update_status(){
     $("#AutoUpdateStatus").css("color", "");
-    $("#AutoUpdateStatus").show(); // AFFICHE L'ÉLEMENT 'AutoUpdateStatus'
+    $("#AutoUpdateStatus").show();
     UPDATE_STATUS_COUNT++;
 }
+
 // Hide Status
+/**
+ * Hide 'AutoUpdateStatus'
+ * @returns void
+ */
 function hide_update_status(){
     UPDATE_STATUS_COUNT--;
     if (UPDATE_STATUS_COUNT <= 0){
@@ -2947,7 +3037,12 @@ function hide_update_status(){
         UPDATE_STATUS_COUNT = 0;
     }
 }
+
 // Auto Update
+/**
+ * 'AutoUpdateButton' event
+ * @param {boolean} toggleState 
+ */
 function auto_update_click(toggleState=true){
     if( toggleState) {
         $('#AutoUpdateButton').bootstrapSwitch('toggleState');
@@ -2966,6 +3061,14 @@ function auto_update_click(toggleState=true){
 // NOTIFICATIONS :
 
 // Add Notification
+/**
+ * Display an error/information message
+ * @param {string} message Message to display
+ * @param {number} level Level of notification
+ * @param {number} timeout Notification timeout
+ * @param {boolean} clearable Is clearable ?
+ * @returns void
+ */
 function add_notification(message, level,timeout,clearable) {
     timeout = typeof timeout !== 'undefined' ? timeout : 7000;
     clearable = typeof clearable !== 'undefined' ? clearable : true;
@@ -3035,14 +3138,24 @@ function add_notification(message, level,timeout,clearable) {
     NOTIFICATION_COUNT = NOTIFICATION_COUNT + 1;
     console.log(message_pre + new Date().toLocaleTimeString() + ': ' + message);
 }
+
 // Raise Data
+/**
+ * Display a 'date out of date' error notification
+ * @returns void
+ */
 function raise_data_out_of_date_error(){
     if (!DATA_OUT_OF_DATE){
         DATA_OUT_OF_DATE = true;
         DATA_OUT_OF_DATE_ALERT_ID = add_notification('displayed data is out of date!',4,false,false);
     }
 }
+
 // CLear Date 
+/**
+ * Close the 'data out of date' error notification
+ * @returns void
+ */
 function clear_data_out_of_date_error(){
     if (DATA_OUT_OF_DATE){
         DATA_OUT_OF_DATE = false;
@@ -3052,6 +3165,10 @@ function clear_data_out_of_date_error(){
 
 
 // UPDATE LOG :
+/**
+ * Update logs
+ * @returns {boolean}
+ */
 function update_log() {
     if (LOG_FETCH_PENDING_COUNT){return false;}
     LOG_FETCH_PENDING_COUNT = true;
@@ -3094,6 +3211,12 @@ function update_log() {
 
 
 // REFRESH LOGO :
+/**
+ * Refresh logo 
+ * @param {number} key Element id where to refresh the logo
+ * @param {object} type
+ * @returns void
+ */
 function refresh_logo(key, type){
     if (type == "variable") {type_short="var";} else {type_short = "prop";}
     $.each($(".control-item.type-numeric." + type_short + "-" + key + " img"), function(k,v){
@@ -3114,6 +3237,15 @@ function refresh_logo(key, type){
 
 
 // CHECK MIN MAX :
+/**
+ * Check if 'value' is between min max
+ * @param {number} value Value to check
+ * @param {number} min 
+ * @param {number} max 
+ * @param {number} min_strict 
+ * @param {number} max_strict 
+ * @returns {boolean}
+ */
 function check_min_max(value, min, max, min_strict, max_strict) {
 
     min_strict = typeof min_strict !== 'undefined' ? min_strict : "lte";
@@ -3192,6 +3324,11 @@ $.ajaxSetup({
 //                             -----------------------------------------------------------
 
 // HTTP SAFE METHOD :
+/**
+ * Return a HTTP methods
+ * @param {object} method 
+ * @returns {object}
+ */
 function csrfSafeMethod(method) {
     // these HTTP methods do not require CSRF protection
     return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
@@ -3200,12 +3337,24 @@ function csrfSafeMethod(method) {
 // DATE :
 
 // Set Date Range
+/**
+ * Set date range
+ * @param {number} start Date range start
+ * @param {number} end Date range stop
+ * @returns void
+ */
 function daterange_set(start, end) {
     //$('#daterange').data('daterangepicker').setStartDate(start);
     //$('#daterange').data('daterangepicker').setEndDate(end);
     daterange_cb(start, end);
 }
+
 // Date Range Cb 
+/**
+ * Set 'daterange span' and adapt content padding top on navbar size
+ * @param {number} start Date range start
+ * @param {number} end Date range stop
+ */
 function daterange_cb(start, end) {
     //
     //
@@ -3450,6 +3599,12 @@ $('button.write-task-btn').click(function(){
 
 // fix drop down problem
 $( document ).ready(function() {
+    // show buttons
+    $("#loadingAnimation").parent().show();
+    $("#AutoUpdateStatus").parent().parent().show();
+    $("#ReadAllTask").parent().parent().show();
+    $("#AutoUpdateButtonParent").show();
+
     // init loading states
     set_loading_state(1, 40);
 
@@ -3512,14 +3667,9 @@ $( document ).ready(function() {
             $('a[href$="' + window.location.hash + '"]').parent('li').addClass('active');
             show_page();
         }
-        // Show/hide timeline
-        if (window.location.hash.substr(1) !== '') {
-            if ($("#" + window.location.hash.substr(1) + " .has_chart").length) {
-                $(".show_timeline").removeClass("hidden");
-            }else {
-                $(".show_timeline").addClass("hidden");
-            }
-        }
+        toggle_daterangepicker();
+        toggle_timeline();
+        updatePyScadaPlots(false);
     });
 
     set_loading_state(1, loading_states[1] + 10);
@@ -3583,9 +3733,13 @@ $( document ).ready(function() {
 
         thresholdValues = JSON.parse($(val).data('params').threshold_values);
 
+        max2 = max;
+        for (v in tv) {if (v != "max") {max2 = Math.max(max2, v);}
+    }
         threshold_values = [];
         for (var v in thresholdValues) {
-                threshold_values.push({value:v, color:thresholdValues[v]});
+            if (v == "max") {v = max2;tv[v]=tv['max'];}
+            threshold_values.push({value:v, color:tv[v]})
         }
         if ( threshold_values === "" ) {threshold_values = [];}
         // add a new Plot
@@ -3689,14 +3843,9 @@ $( document ).ready(function() {
 	}
     });
 
-    // show timeline init
-    if (window.location.hash.substr(1) !== '') {
-        if ($("#" + window.location.hash.substr(1) + " .has_chart").length) {
-            $(".show_timeline").removeClass("hidden");
-        } else {
-            $(".show_timeline").addClass("hidden");
-        }
-    }
+    // show timeline and daterangepicker
+    toggle_daterangepicker();
+    toggle_timeline();
 
     set_loading_state(1, loading_states[1] + 10);
 
@@ -3719,102 +3868,104 @@ $( document ).ready(function() {
     });
 
     // Date range picker
-    $('#daterange').daterangepicker({
-        "showDropdowns": true,
-        "timePicker": true,
-        "timePicker24Hour": true,
-        "timePickerSeconds": true,
-        ranges: {
-            'Last 10 Minutes': [moment().subtract(10, 'minutes'), moment()],
-            'Last 30 Minutes': [moment().subtract(30, 'minutes'), moment()],
-            'Last Hour': [moment().subtract(1, 'hours'), moment()],
-            'Last 2 Hour': [moment().subtract(2, 'hours'), moment()],
-            'Last 6 Hour': [moment().subtract(6, 'hours'), moment()],
-            'Last 12 Hour': [moment().subtract(12, 'hours'), moment()],
-            'Today': [moment().startOf('day'), moment()],
-            'Yesterday': [moment().subtract(1, 'days').startOf('day'), moment().subtract(1, 'days').endOf('day')],
-            'Last 7 Days': [moment().subtract(6, 'days'), moment()],
-            'Last 30 Days': [moment().subtract(29, 'days'), moment()],
-            'This Month': [moment().startOf('month'), moment()],
-            'Previous Month': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')],
-            'Last Month': [moment().subtract(1, 'month'), moment()],
-            'Last 2 Month': [moment().subtract(2, 'month'), moment()],
-            'Last 6 Month': [moment().subtract(6, 'month'), moment()],
-            'This Year': [moment().startOf('year'), moment()],
-            'Previous Year': [moment().subtract(1, 'year').startOf('year'), moment().subtract(1, 'year').endOf('year')],
-            'Last Year': [moment().subtract(1, 'year'), moment()],
-        },
-        "locale": {
-            "format": daterange_format,
-            "separator": " - ",
-            "applyLabel": "Apply",
-            "cancelLabel": "Cancel",
-            "fromLabel": "From",
-            "toLabel": "To",
-            "customRangeLabel": "Custom",
-            "weekLabel": "W",
-            "daysOfWeek": [
-                "Mo",
-                "Tu",
-                "We",
-                "Th",
-                "Fr",
-                "Sa",
-                "Su",
-            ],
-            "monthNames": [
-                "January",
-                "February",
-                "March",
-                "April",
-                "May",
-                "June",
-                "July",
-                "August",
-                "September",
-                "October",
-                "November",
-                "December"
-            ],
-            "firstDay": 1
-        },
-        "alwaysShowCalendars": true,
-        "linkedCalendars": false,
-        "startDate": moment(),
-        "endDate": moment().subtract(2, 'hours'),
-        "opens": "left"
-    }, function(start, end, label) {
-        LOADING_PAGE_DONE = 0;
-        set_loading_state(5, 0);
-        daterange_cb(start, end);
-        DATA_INIT_STATUS++;
-        DATA_FROM_TIMESTAMP = start.unix() * 1000;
-        if (label.indexOf('Last') !== -1 || label.indexOf('Today') !== -1 || label.indexOf('This Month') !== -1 || label.indexOf('This Year') !== -1) {
-            PREVIOUS_AUTO_UPDATE_ACTIVE_STATE = true;
-        }else {
-            PREVIOUS_AUTO_UPDATE_ACTIVE_STATE = false;
-        }
-        DATA_TO_TIMESTAMP = Math.min(end.unix() * 1000, SERVER_TIME);
-        DATA_BUFFER_SIZE = DATA_TO_TIMESTAMP - DATA_FROM_TIMESTAMP;
-        INIT_CHART_VARIABLES_DONE = false;
-        $('#loadingAnimation').show();
-    });
-    $('#daterange').on('show.daterangepicker', function(ev, picker) {
-        PREVIOUS_AUTO_UPDATE_ACTIVE_STATE = AUTO_UPDATE_ACTIVE;
-        PREVIOUS_END_DATE = moment.min(picker.endDate, moment()).unix();
-        if($('#AutoUpdateButton').bootstrapSwitch('state') && AUTO_UPDATE_ACTIVE){
-            auto_update_click();
-        }
-    });
-    $('#daterange').on('hide.daterangepicker', function(ev, picker) {
-        if(!$('#AutoUpdateButton').bootstrapSwitch('state') && PREVIOUS_AUTO_UPDATE_ACTIVE_STATE){
-            auto_update_click();
-        }
-        DATA_DISPLAY_FROM_TIMESTAMP = -1;
-        DATA_DISPLAY_TO_TIMESTAMP = -1;
-        DATA_DISPLAY_WINDOW = DATA_TO_TIMESTAMP - DATA_FROM_TIMESTAMP;
-        set_x_axes();
-    });
+    if ($("#" + window.location.hash.substr(1) + ".show_daterangepicker").length) {
+        $('#daterange').daterangepicker({
+            "showDropdowns": true,
+            "timePicker": true,
+            "timePicker24Hour": true,
+            "timePickerSeconds": true,
+            ranges: {
+                'Last 10 Minutes': [moment().subtract(10, 'minutes'), moment()],
+                'Last 30 Minutes': [moment().subtract(30, 'minutes'), moment()],
+                'Last Hour': [moment().subtract(1, 'hours'), moment()],
+                'Last 2 Hour': [moment().subtract(2, 'hours'), moment()],
+                'Last 6 Hour': [moment().subtract(6, 'hours'), moment()],
+                'Last 12 Hour': [moment().subtract(12, 'hours'), moment()],
+                'Today': [moment().startOf('day'), moment()],
+                'Yesterday': [moment().subtract(1, 'days').startOf('day'), moment().subtract(1, 'days').endOf('day')],
+                'Last 7 Days': [moment().subtract(6, 'days'), moment()],
+                'Last 30 Days': [moment().subtract(29, 'days'), moment()],
+                'This Month': [moment().startOf('month'), moment()],
+                'Previous Month': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')],
+                'Last Month': [moment().subtract(1, 'month'), moment()],
+                'Last 2 Month': [moment().subtract(2, 'month'), moment()],
+                'Last 6 Month': [moment().subtract(6, 'month'), moment()],
+                'This Year': [moment().startOf('year'), moment()],
+                'Previous Year': [moment().subtract(1, 'year').startOf('year'), moment().subtract(1, 'year').endOf('year')],
+                'Last Year': [moment().subtract(1, 'year'), moment()],
+            },
+            "locale": {
+                "format": daterange_format,
+                "separator": " - ",
+                "applyLabel": "Apply",
+                "cancelLabel": "Cancel",
+                "fromLabel": "From",
+                "toLabel": "To",
+                "customRangeLabel": "Custom",
+                "weekLabel": "W",
+                "daysOfWeek": [
+                    "Mo",
+                    "Tu",
+                    "We",
+                    "Th",
+                    "Fr",
+                    "Sa",
+                    "Su",
+                ],
+                "monthNames": [
+                    "January",
+                    "February",
+                    "March",
+                    "April",
+                    "May",
+                    "June",
+                    "July",
+                    "August",
+                    "September",
+                    "October",
+                    "November",
+                    "December"
+                ],
+                "firstDay": 1
+            },
+            "alwaysShowCalendars": true,
+            "linkedCalendars": false,
+            "startDate": moment(),
+            "endDate": moment().subtract(2, 'hours'),
+            "opens": "left"
+        }, function(start, end, label) {
+            LOADING_PAGE_DONE = 0;
+            set_loading_state(5, 0);
+            daterange_cb(start, end);
+            DATA_INIT_STATUS++;
+            DATA_FROM_TIMESTAMP = start.unix() * 1000;
+            if (label.indexOf('Last') !== -1 || label.indexOf('Today') !== -1 || label.indexOf('This Month') !== -1 || label.indexOf('This Year') !== -1) {
+                PREVIOUS_AUTO_UPDATE_ACTIVE_STATE = true;
+            }else {
+                PREVIOUS_AUTO_UPDATE_ACTIVE_STATE = false;
+            }
+            DATA_TO_TIMESTAMP = Math.min(end.unix() * 1000, SERVER_TIME);
+            DATA_BUFFER_SIZE = DATA_TO_TIMESTAMP - DATA_FROM_TIMESTAMP;
+            INIT_CHART_VARIABLES_DONE = false;
+            $('#loadingAnimation').show()
+        });
+        $('#daterange').on('show.daterangepicker', function(ev, picker) {
+            PREVIOUS_AUTO_UPDATE_ACTIVE_STATE = AUTO_UPDATE_ACTIVE
+            PREVIOUS_END_DATE = moment.min(picker.endDate, moment()).unix();
+            if($('#AutoUpdateButton').bootstrapSwitch('state') && AUTO_UPDATE_ACTIVE){
+                auto_update_click();
+            };
+        });
+        $('#daterange').on('hide.daterangepicker', function(ev, picker) {
+            if(!$('#AutoUpdateButton').bootstrapSwitch('state') && PREVIOUS_AUTO_UPDATE_ACTIVE_STATE){
+                auto_update_click();
+            };
+            DATA_DISPLAY_FROM_TIMESTAMP = -1;
+            DATA_DISPLAY_TO_TIMESTAMP = -1;
+            DATA_DISPLAY_WINDOW = DATA_TO_TIMESTAMP - DATA_FROM_TIMESTAMP;
+            set_x_axes();
+        });
+    }
 
     set_loading_state(1, 100);
     hide_loading_state();

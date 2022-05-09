@@ -161,7 +161,7 @@ var INIT_STATUS_COUNT = 0;
 var UPDATE_STATUS_COUNT = 0;
 
 /**
- * Auto chart's data update button active
+ * Auto chart's data update button status
  * @type {boolean}
  */
 var AUTO_UPDATE_ACTIVE = true;
@@ -497,7 +497,7 @@ function timestamp_conversion(id,val){
 /**
  * Convert milliseconds into time format
  * @param {*} duration Time to convert
- * @returns {string} Return a time like string
+ * @returns {string} Return a time string like
  */
 function msToTime(duration) {
     var milliseconds = parseInt(duration % 1000),
@@ -1102,7 +1102,7 @@ function data_handler_done(fetched_data){
 
 
 /**
- * Will display an error notification
+ * Will display an Ajax error notification
  * @param {*} x 
  * @param {*} t 
  * @param {*} m 
@@ -1915,6 +1915,13 @@ function PyScadaPlot(id, xaxisVarId, xaxisLinLog){
     }
 }
 // Gauge
+/**
+ * A 240° circular chart with a data range
+ * @param {number} id The container id where to display the chart
+ * @param {numer} min_value Range minimum value
+ * @param {number} max_value Range maximum value
+ * @param {Array&lt;object>} threshold_values Datas
+ */
 function Gauge(id, min_value, max_value, threshold_values){
     var options = {
         series: {
@@ -2011,7 +2018,7 @@ function Gauge(id, min_value, max_value, threshold_values){
             // draw the chart if we have data
             if (series.length > 0) {
                 var plotCanvas = $('&lt;div>&lt;/div>');
-                elem = $(chart_container_id + ' .chart-placeholder')
+                elem = $(chart_container_id + ' .chart-placeholder');
                 
                 //mhw = Math.min(elem.parent().height() * 1.3, elem.parent().width());
                 mhw = elem.parent().width();
@@ -2047,8 +2054,13 @@ function Gauge(id, min_value, max_value, threshold_values){
         }
     }
 }
-// Bar - A Distributed Columns chart which display datas from one to multiple variables.
-// Bar requires data, an id ( used to display the chart in the right HTML element ), and a minimal and maximum value for y axe.
+// Bar
+/**
+ * A Distributed Columns chart which display datas from one to multiple variables.
+ * @param {number} id The container id where to display the chart
+ * @param {number} min The y axe minimum value
+ * @param {numer} max The y axe maximum value
+ */
 function Bar(id, min, max){
     var options = {
         series: [{
@@ -2270,7 +2282,13 @@ function Bar(id, min, max){
     function resize() {
     }
 }
-// Pie - chart with radius and innierRadius options
+// Pie
+/**
+ * A chart with radius and innierRadius options
+ * @param {number} id The container id where to display the chart
+ * @param {number} radius The pie radius
+ * @param {number} innerRadius The pie inner radius
+ */
 function Pie(id, radius, innerRadius){
     var options = {
         series: {
@@ -2459,6 +2477,10 @@ function Pie(id, radius, innerRadius){
 //                             -----------------------------------------------------------
 
 // CHART SELECTION :
+/**
+ * Depending on the checked check box, zoom x or y activated for each x y axes chart
+ * @returns void
+ */
 function set_chart_selection_mode(){
 
     // ZOOM MODE :
@@ -2503,7 +2525,11 @@ function set_chart_selection_mode(){
 }
 
 
-// X AXES - for each chart container, update charts then update timeline :
+// X AXES
+/**
+ * For each chart container, update charts then update timeline
+ * @returns void
+ */
 function set_x_axes(){
     if(!progressbar_resize_active){
         $.each(PyScadaPlots,function(plot_id){
@@ -2518,7 +2544,11 @@ function set_x_axes(){
 }
 
 
-// UPDATE TIMELINE - update the timeline axe depending on data timestamp variables
+// UPDATE TIMELINE
+/**
+ * Update the timeline axe depending on data timestamp variables
+ * @returns void
+ */
 function update_timeline(){
     if (DATA_DISPLAY_TO_TIMESTAMP &lt; 0){
         $('#timeline-time-to-label').html("");
@@ -2562,6 +2592,12 @@ function update_timeline(){
 // CROSSHAIRS :
 
 // Set Crosshairs
+/**
+ * Set crosshairs on 'flotPlot'
+ * @param {object} flotPlot The chart 
+ * @param {*} id 
+ * @returns void
+ */
 function setCrosshairs(flotPlot, id) {
     //test if function setCrosshairs exist in hooks.drawOverlay before add it
     $('.chart-legend-value-' + id).removeClass('type-numeric');
@@ -2574,13 +2610,13 @@ function setCrosshairs(flotPlot, id) {
                     $('.chart-legend-value-' + PyScadaPlots[plot_id].getId()).removeClass('type-numeric');
                     setTimeout(PyScadaPlots[plot_id].updateLegend(), 50);
                     if (PyScadaPlots[plot_id].getId() == id) {
-                        PyScadaPlots[plot_id].getFlotObject().getOptions().crosshair.mode = 'xy'
+                        PyScadaPlots[plot_id].getFlotObject().getOptions().crosshair.mode = 'xy';
                     }else {
-                        PyScadaPlots[plot_id].getFlotObject().getOptions().crosshair.mode = 'x'
+                        PyScadaPlots[plot_id].getFlotObject().getOptions().crosshair.mode = 'x';
                     }
                 }else {
                     PyScadaPlots[plot_id].getFlotObject().setCrosshair();
-                    PyScadaPlots[plot_id].getFlotObject().getOptions().crosshair.mode = 'xy'
+                    PyScadaPlots[plot_id].getFlotObject().getOptions().crosshair.mode = 'xy';
                     $('.chart-legend-value-' + PyScadaPlots[plot_id].getId()).addClass('type-numeric');
                 }
             }
@@ -2588,16 +2624,26 @@ function setCrosshairs(flotPlot, id) {
     });
 }
 // Delete Crosshairs
+/**
+ * Delete every crosshairs on 'flotPlot'
+ * @param {object} flotPlot The chart
+ * @returns void
+ */
 function delCrosshairs(flotPlot) {
     $.each(PyScadaPlots,function(plot_id){
         if (typeof PyScadaPlots[plot_id].getFlotObject() !== 'undefined') {
             PyScadaPlots[plot_id].getFlotObject().setCrosshair();
-            PyScadaPlots[plot_id].getFlotObject().getOptions().crosshair.mode = 'xy'
+            PyScadaPlots[plot_id].getFlotObject().getOptions().crosshair.mode = 'xy';
         }
         $('.chart-legend-value-' + PyScadaPlots[plot_id].getId()).addClass('type-numeric');
     });
 }
 // Unlock Crosshairs
+/**
+ * Unlock each crosshairs on 'flotPlot'
+ * @param {object} flotPlot The chart
+ * @returns void
+ */
 function unlockCrosshairs(flotPlot) {
     $.each(PyScadaPlots,function(plot_id){
         if (typeof PyScadaPlots[plot_id].getFlotObject() !== 'undefined') {
@@ -2606,6 +2652,9 @@ function unlockCrosshairs(flotPlot) {
     });
 }
 // Lock Crosshairs
+/**
+ * Lock each crosshairs on each chart
+ */
 function lockCrosshairs() {
     $.each(PyScadaPlots,function(plot_id){
         if (typeof PyScadaPlots[plot_id].getFlotObject() !== 'undefined') {
@@ -2616,6 +2665,14 @@ function lockCrosshairs() {
 
 
 // COLOR GRADIENT :
+/**
+ *  Color gradient 
+ * @param {number} fadeFraction 
+ * @param {Color} rgbColor1 
+ * @param {Color} rgbColor2 
+ * @param {Color} rgbColor3 
+ * @returns {string} return a color gradient
+ */
 function colorGradient(fadeFraction, rgbColor1, rgbColor2, rgbColor3) {
     var color1 = rgbColor1;
     var color2 = rgbColor2;
@@ -2661,7 +2718,11 @@ function colorGradient(fadeFraction, rgbColor1, rgbColor2, rgbColor3) {
 //                                                    Page's Settings
 //                             -----------------------------------------------------------
 
-// PADDING - Adapt content padding top on navbar size
+// PADDING
+/**
+ * Adapt content padding top on navbar size
+ * @returns void
+ */
 function set_content_padding_top() {
     navbar_height = $('.navbar-collapse')[0].offsetHeight;
     if (navbar_height > 50) {
@@ -3813,13 +3874,13 @@ $( document ).ready(function() {
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#add_fetched_data">add_fetched_data</a></li><li><a href="global.html#AUTO_UPDATE_ACTIVE">AUTO_UPDATE_ACTIVE</a></li><li><a href="global.html#CACHE_TIMEOUT">CACHE_TIMEOUT</a></li><li><a href="global.html#CHART_VARIABLE_KEYS">CHART_VARIABLE_KEYS</a></li><li><a href="global.html#check_buffer">check_buffer</a></li><li><a href="global.html#Color">Color</a></li><li><a href="global.html#CSRFTOKEN">CSRFTOKEN</a></li><li><a href="global.html#DATA">DATA</a></li><li><a href="global.html#DATA_BUFFER_SIZE">DATA_BUFFER_SIZE</a></li><li><a href="global.html#DATA_DISPLAY_FROM_TIMESTAMP">DATA_DISPLAY_FROM_TIMESTAMP</a></li><li><a href="global.html#DATA_DISPLAY_TO_TIMESTAMP">DATA_DISPLAY_TO_TIMESTAMP</a></li><li><a href="global.html#DATA_DISPLAY_WINDOW">DATA_DISPLAY_WINDOW</a></li><li><a href="global.html#DATA_FROM_TIMESTAMP">DATA_FROM_TIMESTAMP</a></li><li><a href="global.html#data_handler">data_handler</a></li><li><a href="global.html#data_handler_ajax">data_handler_ajax</a></li><li><a href="global.html#data_handler_done">data_handler_done</a></li><li><a href="global.html#data_handler_fail">data_handler_fail</a></li><li><a href="global.html#DATA_INIT_STATUS">DATA_INIT_STATUS</a></li><li><a href="global.html#DATA_OUT_OF_DATE">DATA_OUT_OF_DATE</a></li><li><a href="global.html#DATA_OUT_OF_DATE_ALERT_ID">DATA_OUT_OF_DATE_ALERT_ID</a></li><li><a href="global.html#DATA_TO_TIMESTAMP">DATA_TO_TIMESTAMP</a></li><li><a href="global.html#DataFetchingProcessCount">DataFetchingProcessCount</a></li><li><a href="global.html#daterange_format">daterange_format</a></li><li><a href="global.html#debug">debug</a></li><li><a href="global.html#dictionary">dictionary</a></li><li><a href="global.html#FETCH_DATA_PENDING">FETCH_DATA_PENDING</a></li><li><a href="global.html#FETCH_DATA_TIMEOUT">FETCH_DATA_TIMEOUT</a></li><li><a href="global.html#find_index">find_index</a></li><li><a href="global.html#find_index_sub_gte">find_index_sub_gte</a></li><li><a href="global.html#find_index_sub_lte">find_index_sub_lte</a></li><li><a href="global.html#INIT_CHART_VARIABLES_COUNT">INIT_CHART_VARIABLES_COUNT</a></li><li><a href="global.html#INIT_CHART_VARIABLES_DONE">INIT_CHART_VARIABLES_DONE</a></li><li><a href="global.html#INIT_STATUS_COUNT">INIT_STATUS_COUNT</a></li><li><a href="global.html#INIT_STATUS_VARIABLES_DONE">INIT_STATUS_VARIABLES_DONE</a></li><li><a href="global.html#JSON_ERROR_COUNT">JSON_ERROR_COUNT</a></li><li><a href="global.html#LAST_QUERY_TIME">LAST_QUERY_TIME</a></li><li><a href="global.html#loading_labels">loading_labels</a></li><li><a href="global.html#LOADING_PAGE_DONE">LOADING_PAGE_DONE</a></li><li><a href="global.html#loading_percent">loading_percent</a></li><li><a href="global.html#loading_states">loading_states</a></li><li><a href="global.html#LOG_FETCH_PENDING_COUNT">LOG_FETCH_PENDING_COUNT</a></li><li><a href="global.html#LOG_LAST_TIMESTAMP">LOG_LAST_TIMESTAMP</a></li><li><a href="global.html#msToTime">msToTime</a></li><li><a href="global.html#NOTIFICATION_COUNT">NOTIFICATION_COUNT</a></li><li><a href="global.html#PREVIOUS_AUTO_UPDATE_ACTIVE_STATE">PREVIOUS_AUTO_UPDATE_ACTIVE_STATE</a></li><li><a href="global.html#PREVIOUS_END_DATE">PREVIOUS_END_DATE</a></li><li><a href="global.html#progressbar_resize_active">progressbar_resize_active</a></li><li><a href="global.html#PyScadaPlot">PyScadaPlot</a></li><li><a href="global.html#PyScadaPlots">PyScadaPlots</a></li><li><a href="global.html#REFRESH_RATE">REFRESH_RATE</a></li><li><a href="global.html#ROOT_URL">ROOT_URL</a></li><li><a href="global.html#SERVER_TIME">SERVER_TIME</a></li><li><a href="global.html#STATUS_VARIABLE_KEYS">STATUS_VARIABLE_KEYS</a></li><li><a href="global.html#timestamp_conversion">timestamp_conversion</a></li><li><a href="global.html#update_data_colors">update_data_colors</a></li><li><a href="global.html#update_data_values">update_data_values</a></li><li><a href="global.html#UPDATE_STATUS_COUNT">UPDATE_STATUS_COUNT</a></li><li><a href="global.html#UPDATE_X_AXES_TIME_LINE_STATUS">UPDATE_X_AXES_TIME_LINE_STATUS</a></li><li><a href="global.html#VARIABLE_KEYS">VARIABLE_KEYS</a></li><li><a href="global.html#VARIABLE_PROPERTIES">VARIABLE_PROPERTIES</a></li><li><a href="global.html#VARIABLE_PROPERTIES_DATA">VARIABLE_PROPERTIES_DATA</a></li><li><a href="global.html#VARIABLE_PROPERTIES_LAST_MODIFIED">VARIABLE_PROPERTIES_LAST_MODIFIED</a></li><li><a href="global.html#VARIABLE_PROPERTY_KEYS">VARIABLE_PROPERTY_KEYS</a></li><li><a href="global.html#version">version</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#add_fetched_data">add_fetched_data</a></li><li><a href="global.html#AUTO_UPDATE_ACTIVE">AUTO_UPDATE_ACTIVE</a></li><li><a href="global.html#Bar">Bar</a></li><li><a href="global.html#CACHE_TIMEOUT">CACHE_TIMEOUT</a></li><li><a href="global.html#CHART_VARIABLE_KEYS">CHART_VARIABLE_KEYS</a></li><li><a href="global.html#check_buffer">check_buffer</a></li><li><a href="global.html#Color">Color</a></li><li><a href="global.html#colorGradient">colorGradient</a></li><li><a href="global.html#CSRFTOKEN">CSRFTOKEN</a></li><li><a href="global.html#DATA">DATA</a></li><li><a href="global.html#DATA_BUFFER_SIZE">DATA_BUFFER_SIZE</a></li><li><a href="global.html#DATA_DISPLAY_FROM_TIMESTAMP">DATA_DISPLAY_FROM_TIMESTAMP</a></li><li><a href="global.html#DATA_DISPLAY_TO_TIMESTAMP">DATA_DISPLAY_TO_TIMESTAMP</a></li><li><a href="global.html#DATA_DISPLAY_WINDOW">DATA_DISPLAY_WINDOW</a></li><li><a href="global.html#DATA_FROM_TIMESTAMP">DATA_FROM_TIMESTAMP</a></li><li><a href="global.html#data_handler">data_handler</a></li><li><a href="global.html#data_handler_ajax">data_handler_ajax</a></li><li><a href="global.html#data_handler_done">data_handler_done</a></li><li><a href="global.html#data_handler_fail">data_handler_fail</a></li><li><a href="global.html#DATA_INIT_STATUS">DATA_INIT_STATUS</a></li><li><a href="global.html#DATA_OUT_OF_DATE">DATA_OUT_OF_DATE</a></li><li><a href="global.html#DATA_OUT_OF_DATE_ALERT_ID">DATA_OUT_OF_DATE_ALERT_ID</a></li><li><a href="global.html#DATA_TO_TIMESTAMP">DATA_TO_TIMESTAMP</a></li><li><a href="global.html#DataFetchingProcessCount">DataFetchingProcessCount</a></li><li><a href="global.html#daterange_format">daterange_format</a></li><li><a href="global.html#debug">debug</a></li><li><a href="global.html#delCrosshairs">delCrosshairs</a></li><li><a href="global.html#dictionary">dictionary</a></li><li><a href="global.html#FETCH_DATA_PENDING">FETCH_DATA_PENDING</a></li><li><a href="global.html#FETCH_DATA_TIMEOUT">FETCH_DATA_TIMEOUT</a></li><li><a href="global.html#find_index">find_index</a></li><li><a href="global.html#find_index_sub_gte">find_index_sub_gte</a></li><li><a href="global.html#find_index_sub_lte">find_index_sub_lte</a></li><li><a href="global.html#Gauge">Gauge</a></li><li><a href="global.html#INIT_CHART_VARIABLES_COUNT">INIT_CHART_VARIABLES_COUNT</a></li><li><a href="global.html#INIT_CHART_VARIABLES_DONE">INIT_CHART_VARIABLES_DONE</a></li><li><a href="global.html#INIT_STATUS_COUNT">INIT_STATUS_COUNT</a></li><li><a href="global.html#INIT_STATUS_VARIABLES_DONE">INIT_STATUS_VARIABLES_DONE</a></li><li><a href="global.html#JSON_ERROR_COUNT">JSON_ERROR_COUNT</a></li><li><a href="global.html#LAST_QUERY_TIME">LAST_QUERY_TIME</a></li><li><a href="global.html#loading_labels">loading_labels</a></li><li><a href="global.html#LOADING_PAGE_DONE">LOADING_PAGE_DONE</a></li><li><a href="global.html#loading_percent">loading_percent</a></li><li><a href="global.html#loading_states">loading_states</a></li><li><a href="global.html#lockCrosshairs">lockCrosshairs</a></li><li><a href="global.html#LOG_FETCH_PENDING_COUNT">LOG_FETCH_PENDING_COUNT</a></li><li><a href="global.html#LOG_LAST_TIMESTAMP">LOG_LAST_TIMESTAMP</a></li><li><a href="global.html#msToTime">msToTime</a></li><li><a href="global.html#NOTIFICATION_COUNT">NOTIFICATION_COUNT</a></li><li><a href="global.html#Pie">Pie</a></li><li><a href="global.html#PREVIOUS_AUTO_UPDATE_ACTIVE_STATE">PREVIOUS_AUTO_UPDATE_ACTIVE_STATE</a></li><li><a href="global.html#PREVIOUS_END_DATE">PREVIOUS_END_DATE</a></li><li><a href="global.html#progressbar_resize_active">progressbar_resize_active</a></li><li><a href="global.html#PyScadaPlot">PyScadaPlot</a></li><li><a href="global.html#PyScadaPlots">PyScadaPlots</a></li><li><a href="global.html#REFRESH_RATE">REFRESH_RATE</a></li><li><a href="global.html#ROOT_URL">ROOT_URL</a></li><li><a href="global.html#SERVER_TIME">SERVER_TIME</a></li><li><a href="global.html#set_chart_selection_mode">set_chart_selection_mode</a></li><li><a href="global.html#set_content_padding_top">set_content_padding_top</a></li><li><a href="global.html#set_x_axes">set_x_axes</a></li><li><a href="global.html#setCrosshairs">setCrosshairs</a></li><li><a href="global.html#STATUS_VARIABLE_KEYS">STATUS_VARIABLE_KEYS</a></li><li><a href="global.html#timestamp_conversion">timestamp_conversion</a></li><li><a href="global.html#unlockCrosshairs">unlockCrosshairs</a></li><li><a href="global.html#update_data_colors">update_data_colors</a></li><li><a href="global.html#update_data_values">update_data_values</a></li><li><a href="global.html#UPDATE_STATUS_COUNT">UPDATE_STATUS_COUNT</a></li><li><a href="global.html#update_timeline">update_timeline</a></li><li><a href="global.html#UPDATE_X_AXES_TIME_LINE_STATUS">UPDATE_X_AXES_TIME_LINE_STATUS</a></li><li><a href="global.html#VARIABLE_KEYS">VARIABLE_KEYS</a></li><li><a href="global.html#VARIABLE_PROPERTIES">VARIABLE_PROPERTIES</a></li><li><a href="global.html#VARIABLE_PROPERTIES_DATA">VARIABLE_PROPERTIES_DATA</a></li><li><a href="global.html#VARIABLE_PROPERTIES_LAST_MODIFIED">VARIABLE_PROPERTIES_LAST_MODIFIED</a></li><li><a href="global.html#VARIABLE_PROPERTY_KEYS">VARIABLE_PROPERTY_KEYS</a></li><li><a href="global.html#version">version</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.10</a> on Fri May 06 2022 15:48:21 GMT+0200 (heure d’été d’Europe centrale)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.10</a> on Mon May 09 2022 09:17:17 GMT+0200 (heure d’été d’Europe centrale)
 </footer>
 
 <script> prettyPrint(); </script>
